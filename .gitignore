@@ -1,0 +1,7 @@
+# LeaDi-PDS diabaikan saat commit git (bila kelak pakai git untuk deploy)
+node_modules/
+data/
+uploads/
+*.log
+.DS_Store
+Thumbs.db

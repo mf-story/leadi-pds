@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#1e4276" />
+  <title>LeaDi-PDS — Lesson Study Digital Platform</title>
+  <link rel="manifest" href="manifest.webmanifest" />
+  <link rel="icon" href="icon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="icon.svg" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <!-- ========================= LOGIN ========================= -->
+  <section id="loginScreen" class="login-screen">
+    <div class="login-card">
+      <div class="login-logo"><img src="icon.svg" alt="LeaDi-PDS" width="72" height="72" /></div>
+      <h1 class="login-title">LeaDi-PDS</h1>
+      <p class="login-sub">Lesson Study Digital Platform<br />berbasis <b>Plan&nbsp;·&nbsp;Do&nbsp;·&nbsp;See</b></p>
+      <form id="loginForm" class="login-form">
+        <label>Username<input type="text" id="loginUser" autocomplete="username" required placeholder="mis. guru" /></label>
+        <label>Kata sandi<input type="password" id="loginPass" autocomplete="current-password" required placeholder="••••••" /></label>
+        <p id="loginError" class="form-error" hidden></p>
+        <button type="submit" class="btn btn-primary btn-block">Masuk</button>
+      </form>
+      <p class="login-demo">Akun demo: <b>admin/dosen/guru/observer</b> — sandi = username + 123</p>
+    </div>
+    <p class="login-foot">Penguatan praktik pembelajaran berbasis bukti di SMP</p>
+  </section>
+
+  <!-- ========================= APP ========================= -->
+  <div id="app" class="app" hidden>
+    <!-- App bar -->
+    <header class="appbar">
+      <div class="appbar-left">
+        <button id="menuBtn" class="icon-btn" aria-label="Menu">☰</button>
+        <div class="brand">
+          <img src="icon.svg" alt="" class="brand-logo" width="30" height="30" />
+          <b>Lesson Study Platform</b>
+        </div>
+      </div>
+      <div class="appbar-right">
+        <button id="notifBtn" class="icon-btn" title="Notifikasi" aria-label="Notifikasi">🔔<span id="notifBadge" class="badge" hidden>0</span></button>
+        <button id="accountBtn" class="avatar-btn" title="Akun"><span id="avatarInitials">?</span></button>
+      </div>
+    </header>
+
+    <!-- Top navigation tabs -->
+    <nav class="topnav" id="topnav">
+      <button class="topnav-tab active" data-nav="dashboard"><span>▦</span> Dashboard</button>
+      <button class="topnav-tab" data-nav="plan"><span>📝</span> Plan</button>
+      <button class="topnav-tab" data-nav="do"><span>🎥</span> Do</button>
+      <button class="topnav-tab" data-nav="see"><span>🔍</span> See</button>
+      <button class="topnav-tab" data-nav="repo"><span>🗄️</span> Repository</button>
+    </nav>
+
+    <!-- Konteks siklus aktif (untuk Plan/Do/See) -->
+    <div class="cycle-context" id="cycleContext" hidden>
+      <div class="cc-left">
+        <label class="cc-label">Siklus aktif</label>
+        <select id="cycleSwitcher" class="cc-select"></select>
+      </div>
+      <div class="cc-right" id="ccActions"></div>
+    </div>
+
+    <main class="content">
+      <!-- DASHBOARD -->
+      <section id="view-dashboard" class="view">
+        <div class="page-head welcome-banner">
+          <div>
+            <h2 id="welcomeName">Dashboard</h2>
+            <p id="welcomeRole" class="muted"></p>
+          </div>
+          <button id="newCycleBtn" class="btn btn-primary btn-sm">+ Siklus Baru</button>
+        </div>
+        <div id="statCards" class="stat-cards"></div>
+        <div class="section-head"><h3>Siklus Lesson Study</h3></div>
+        <div class="filter-bar">
+          <input type="search" id="cycleSearch" placeholder="🔍 Cari judul, mapel, sekolah…" />
+          <div id="statusChips" class="chips">
+            <button class="chip active" data-status="all">Semua</button>
+            <button class="chip" data-status="plan">Plan</button>
+            <button class="chip" data-status="do">Do</button>
+            <button class="chip" data-status="see">See</button>
+            <button class="chip" data-status="selesai">Selesai</button>
+          </div>
+        </div>
+        <div id="cycleList" class="cycle-grid"></div>
+      </section>
+
+      <!-- PLAN -->
+      <section id="view-plan" class="view" hidden>
+        <h2 class="phase-heading plan">Sesi Perencanaan</h2>
+        <div id="planBody"></div>
+      </section>
+
+      <!-- DO -->
+      <section id="view-do" class="view" hidden>
+        <h2 class="phase-heading do">Observasi Kelas</h2>
+        <div id="doBody"></div>
+      </section>
+
+      <!-- SEE -->
+      <section id="view-see" class="view" hidden>
+        <h2 class="phase-heading see">Refleksi Pembelajaran</h2>
+        <div id="seeBody"></div>
+      </section>
+
+      <!-- REPOSITORY -->
+      <section id="view-repo" class="view" hidden>
+        <div class="page-head"><h2>Repository — Praktik Baik & Dokumentasi</h2></div>
+        <p class="muted">Kumpulan hasil Lesson Study terbaik untuk direplikasi & didiseminasikan antar sekolah.</p>
+        <input type="search" id="repoSearch" placeholder="🔍 Cari praktik baik…" class="repo-search" />
+        <div id="repoList" class="cycle-grid"></div>
+      </section>
+
+      <!-- USERS (admin) -->
+      <section id="view-users" class="view" hidden>
+        <div class="page-head"><h2>Kelola Pengguna</h2><button id="newUserBtn" class="btn btn-primary btn-sm">+ Pengguna</button></div>
+        <div id="userList" class="user-list"></div>
+      </section>
+
+      <!-- MASTER SEKOLAH (admin) -->
+      <section id="view-schools" class="view" hidden>
+        <div class="page-head"><h2>Master Sekolah</h2><button id="newSchoolBtn" class="btn btn-primary btn-sm">+ Sekolah</button></div>
+        <p class="muted">Data sekolah terpusat — dipakai untuk Instansi guru & Sekolah mitra pada siklus.</p>
+        <input type="search" id="schoolSearch" placeholder="🔍 Cari sekolah…" class="repo-search" />
+        <div id="schoolList" class="user-list"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- ========================= DRAWER ========================= -->
+  <div id="drawerOverlay" class="drawer-overlay" hidden>
+    <aside class="drawer">
+      <div class="drawer-head">
+        <img src="icon.svg" alt="" width="34" height="34" />
+        <div><b>LeaDi-PDS</b><span>Lesson Study Digital</span></div>
+      </div>
+      <nav class="drawer-nav">
+        <button data-nav="dashboard"><span>▦</span> Dashboard</button>
+        <button data-nav="plan"><span>📝</span> Plan</button>
+        <button data-nav="do"><span>🎥</span> Do</button>
+        <button data-nav="see"><span>🔍</span> See</button>
+        <button data-nav="repo"><span>🗄️</span> Repository</button>
+        <hr />
+        <button id="drawerNewCycle"><span>➕</span> Siklus Baru</button>
+        <button data-nav="users" data-admin><span>👥</span> Kelola Pengguna</button>
+        <button data-nav="schools" data-admin><span>🏫</span> Master Sekolah</button>
+        <button id="drawerAccount"><span>⚙️</span> Akun Saya</button>
+        <button id="drawerLogout" class="danger"><span>⏻</span> Keluar</button>
+      </nav>
+    </aside>
+  </div>
+
+  <!-- ========================= MODALS ========================= -->
+  <div id="cycleModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3 id="cycleModalTitle">Siklus Baru</h3><button class="close-btn" data-close="cycleModal">✕</button></div>
+      <form id="cycleForm" class="modal-body">
+        <label>Judul siklus *<input type="text" id="cTitle" required maxlength="200" placeholder="mis. Menemukan Konsep Pecahan melalui Benda Konkret" /></label>
+        <div class="grid-2">
+          <label>Mata pelajaran<input type="text" id="cMapel" maxlength="120" placeholder="mis. Matematika" /></label>
+          <label>Kelas<input type="text" id="cKelas" maxlength="60" placeholder="mis. VII-A" /></label>
+        </div>
+        <label>Sekolah mitra<input type="text" id="cSekolah" list="schoolOptions" maxlength="160" placeholder="Pilih atau ketik nama sekolah…" /></label>
+        <label>Anggota tim (dosen / observer / guru lain)</label>
+        <div class="member-picker">
+          <input type="search" id="memberSearch" placeholder="Cari nama pengguna…" />
+          <div id="memberOptions" class="picker-options" hidden></div>
+          <div id="memberChips" class="chips-wrap"></div>
+        </div>
+        <p id="cycleError" class="form-error" hidden></p>
+        <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="cycleModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="publishModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3>Terbitkan sebagai Praktik Baik</h3><button class="close-btn" data-close="publishModal">✕</button></div>
+      <form id="publishForm" class="modal-body">
+        <label>Ringkasan praktik baik *<textarea id="pbRingkasan" rows="5" required placeholder="Intisari pembelajaran, temuan, dan dampak yang layak direplikasi…"></textarea></label>
+        <label>Tagar / kata kunci (pisahkan dengan koma)<input type="text" id="pbTags" placeholder="mis. matematika, benda konkret, kolaboratif" /></label>
+        <p id="publishError" class="form-error" hidden></p>
+        <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="publishModal">Batal</button><button type="submit" class="btn btn-primary">Terbitkan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="accountModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3>Akun Saya</h3><button class="close-btn" data-close="accountModal">✕</button></div>
+      <div class="modal-body">
+        <div class="account-head">
+          <div class="photo-preview" id="accPhotoPreview">?</div>
+          <div class="account-head-info">
+            <b id="accName"></b>
+            <span id="accRole" class="role-tag"></span>
+            <div class="photo-actions">
+              <label class="photo-btn">📷 Ubah Foto<input type="file" id="accPhotoInput" accept="image/*" hidden /></label>
+              <button type="button" class="photo-btn danger" id="accPhotoRemove" hidden>🗑 Hapus</button>
+            </div>
+          </div>
+        </div>
+        <form id="profileForm" class="stack">
+          <label>Nama <input type="text" id="accNameInput" maxlength="120" /></label>
+          <label>Jabatan <input type="text" id="accJabatan" maxlength="150" placeholder="mis. Guru Matematika" /></label>
+          <label>Instansi <input type="text" id="accInstansi" list="schoolOptions" maxlength="160" placeholder="mis. SMPN 1 Makassar" /></label>
+          <button type="submit" class="btn btn-primary btn-sm">Simpan profil</button>
+        </form>
+        <hr />
+        <details class="acc-section">
+          <summary class="acc-summary">🔑 Ganti kata sandi</summary>
+          <form id="passwordForm" class="stack">
+            <label>Sandi lama <input type="password" id="pwCurrent" /></label>
+            <label>Sandi baru <input type="password" id="pwNext" /></label>
+            <button type="submit" class="btn btn-ghost btn-sm">Perbarui sandi</button>
+          </form>
+        </details>
+        <hr />
+        <button id="logoutBtn" class="btn btn-danger btn-block">Keluar</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="userModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3 id="userModalTitle">Pengguna Baru</h3><button class="close-btn" data-close="userModal">✕</button></div>
+      <form id="userForm" class="modal-body">
+        <div class="photo-field">
+          <div class="photo-preview" id="uPhotoPreview">?</div>
+          <div class="photo-actions">
+            <label class="photo-btn">📷 Pilih Foto<input type="file" id="uPhotoInput" accept="image/*" hidden /></label>
+            <button type="button" class="photo-btn danger" id="uPhotoRemove" hidden>🗑 Hapus</button>
+          </div>
+        </div>
+        <div class="grid-2">
+          <label>Nama * <input type="text" id="uNama" required maxlength="120" /></label>
+          <label>Peran *<select id="uRole"><option value="guru">Guru SMP</option><option value="dosen">Dosen Pendamping</option><option value="observer">Observer</option><option value="admin">Admin Sistem</option></select></label>
+        </div>
+        <div class="grid-2">
+          <label>Username * <input type="text" id="uUsername" maxlength="30" placeholder="huruf kecil/angka" /></label>
+          <label>Kata sandi <input type="password" id="uPassword" placeholder="min. 4 karakter" /></label>
+        </div>
+        <div class="grid-2">
+          <label>Jabatan <input type="text" id="uJabatan" maxlength="150" /></label>
+          <label>Instansi <input type="text" id="uInstansi" list="schoolOptions" maxlength="160" placeholder="Pilih atau ketik sekolah…" /></label>
+        </div>
+        <p id="userError" class="form-error" hidden></p>
+        <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="userModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="notifPanel" class="notif-panel" hidden>
+    <div class="notif-head"><b>Notifikasi</b><button id="notifReadAll" class="link-btn">Tandai terbaca</button></div>
+    <div id="notifList" class="notif-list"></div>
+  </div>
+
+  <div id="previewModal" class="preview-overlay" hidden>
+    <button class="preview-close" data-close="previewModal">✕</button>
+    <div id="previewBody" class="preview-body"></div>
+  </div>
+
+  <div id="toast" class="toast" hidden></div>
+  <div id="printReport"></div>
+  <datalist id="schoolOptions"></datalist>
+
+  <!-- Modal: master sekolah -->
+  <div id="schoolModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3 id="schoolModalTitle">Sekolah Baru</h3><button class="close-btn" data-close="schoolModal">✕</button></div>
+      <form id="schoolForm" class="modal-body">
+        <label>Nama sekolah *<input type="text" id="sNama" required maxlength="160" placeholder="mis. SMP Negeri 1 Makassar" /></label>
+        <div class="grid-2">
+          <label>Jenjang
+            <select id="sJenjang"><option value="SMP">SMP</option><option value="SD">SD</option><option value="SMA">SMA</option><option value="SMK">SMK</option><option value="MTs">MTs</option><option value="MA">MA</option><option value="Lainnya">Lainnya</option></select>
+          </label>
+          <label>NPSN<input type="text" id="sNpsn" maxlength="20" placeholder="opsional" /></label>
+        </div>
+        <label>Alamat<input type="text" id="sAlamat" maxlength="200" placeholder="opsional" /></label>
+        <p id="schoolError" class="form-error" hidden></p>
+        <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="schoolModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

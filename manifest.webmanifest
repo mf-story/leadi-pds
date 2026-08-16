@@ -1,0 +1,15 @@
+{
+  "name": "LeaDi-PDS — Lesson Study Digital Platform",
+  "short_name": "LeaDi-PDS",
+  "description": "Platform digital Lesson Study berbasis siklus Plan-Do-See untuk penguatan praktik pembelajaran berbasis bukti di SMP.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0d5c63",
+  "theme_color": "#0d5c63",
+  "lang": "id",
+  "icons": [
+    { "src": "icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}

@@ -1,0 +1,21 @@
+[Unit]
+Description=LeaDi-PDS - Lesson Study Digital Platform (Plan-Do-See)
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/leadi-pds
+ExecStart=/usr/bin/node /opt/leadi-pds/server.js
+Environment=NODE_ENV=production
+Environment=PORT=8095
+Environment=HOST=127.0.0.1
+Environment=DATA_ROOT=/opt/leadi-pds
+Restart=always
+RestartSec=3
+# Izinkan menulis data & uploads
+ReadWritePaths=/opt/leadi-pds
+
+[Install]
+WantedBy=multi-user.target

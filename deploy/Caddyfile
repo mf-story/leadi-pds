@@ -1,0 +1,24 @@
+# Caddyfile untuk LeaDi-PDS
+# =========================================================
+# TAHAP 1 (SEKARANG, belum punya domain): akses via http://IP-VPS
+# Blok ":80" di bawah aktif -> Caddy meneruskan ke aplikasi Node (port 8095).
+# =========================================================
+:80 {
+    encode zstd gzip
+    reverse_proxy 127.0.0.1:8095
+    # Izinkan unggahan video besar (server LeaDi-PDS: MAX_BODY 120 MB)
+    request_body {
+        max_size 120MB
+    }
+}
+
+# =========================================================
+# TAHAP 2 (NANTI, setelah punya domain yang mengarah ke IP VPS):
+# Hapus/komentari blok ":80" di atas, lalu AKTIFKAN blok di bawah
+# (ganti domainnya). Caddy otomatis membuat sertifikat HTTPS gratis.
+# =========================================================
+# leadipds.contohdomain.sch.id {
+#     encode zstd gzip
+#     reverse_proxy 127.0.0.1:8095
+#     request_body { max_size 120MB }
+# }

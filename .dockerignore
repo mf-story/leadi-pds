@@ -1,0 +1,9 @@
+# Jangan masukkan ke image (data & unggahan ada di Persistent Storage /data)
+data/
+uploads/
+node_modules/
+*.log
+.git/
+.gitignore
+deploy/
+BluePrint_LeaDi-PDS.pdf
