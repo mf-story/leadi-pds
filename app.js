@@ -454,6 +454,10 @@
   // DO
   function doView(c, editable) {
     const d = c.pelaksanaan || {};
+    const p = c.plan || {};
+    // Pra-isi tanggal & jam pelaksanaan dari jadwal open class (Plan) bila belum diisi
+    const doTgl = d.tanggal || p.tanggalRencana || '';
+    const doJam = d.jam || p.jamRencana || '';
     const firstVideo = (d.videos || [])[0];
     const firstEmbed = (d.videoLinks || []).map(v => ytEmbed(v.url)).find(Boolean);
     let player = '';
@@ -463,14 +467,14 @@
     return `${metaBar(c)}${phaseStepper(c, 'do')}<div class="phase-layout">
       <div class="phase-main">
         <div class="panel">
-          <div class="panel-head do"><span class="ph-ic">🎥</span> Pembelajaran${c.mapel ? ' ' + esc(c.mapel) : ''}${d.tanggal ? ' — ' + fmtDate(d.tanggal) : ''}${d.jam ? ' ' + esc(d.jam) : ''}</div>
+          <div class="panel-head do"><span class="ph-ic">🎥</span> Pembelajaran${c.mapel ? ' ' + esc(c.mapel) : ''}${doTgl ? ' — ' + fmtDate(doTgl) : ''}${doJam ? ' ' + esc(doJam) : ''}</div>
           <div class="panel-body">
             ${player}
             ${videoThumbs(d.videos, editable)}
             ${videoLinksHtml(d.videoLinks, editable)}
             ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="pelaksanaan.videos"></label>
               <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-ghost btn-sm" id="addVideoLink">+ Tautan</button></div>` : ''}
-            ${dateTimeField('Tanggal & jam pelaksanaan', 'pelaksanaan.tanggal', 'pelaksanaan.jam', d.tanggal, d.jam, editable)}
+            ${dateTimeField('Tanggal & jam pelaksanaan', 'pelaksanaan.tanggal', 'pelaksanaan.jam', doTgl, doJam, editable)}
             ${textField('Catatan pelaksanaan', 'pelaksanaan.catatan', d.catatan, editable, 'Kejadian penting saat open class…', true)}
             ${editable ? saveRow('do') : ''}
             <div class="obs-block">
