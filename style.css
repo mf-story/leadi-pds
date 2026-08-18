@@ -319,6 +319,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .modal-body { padding: 0 1.2rem 1.2rem; overflow-y: auto; display: flex; flex-direction: column; gap: .8rem; }
 .modal-actions { display: flex; gap: .6rem; justify-content: flex-end; margin-top: .5rem; }
 .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: .7rem; }
+.modal-body label[hidden] { display: none; }
+.modal-body .grid-2[hidden] { display: none; }
 .stack { display: flex; flex-direction: column; gap: .6rem; }
 .small-title { font-size: .9rem; color: var(--blue-dark); }
 .acc-section { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
