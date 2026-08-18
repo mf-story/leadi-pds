@@ -518,6 +518,7 @@
         <div class="panel">
           <div class="panel-head see"><span class="ph-ic">📊</span> Analisis & Rekomendasi</div>
           <div class="panel-body">
+            ${textField('Catatan', 'refleksi.catatan', s.catatan, editable, 'Kejadian penting saat refleksi…', true)}
             ${textField('Analisis pembelajaran', 'refleksi.analisis', s.analisis, editable, 'Analisis berbasis data: capaian, temuan, keterlibatan siswa…', true)}
             ${textField('Rekomendasi perbaikan', 'refleksi.rekomendasi', s.rekomendasi, editable, 'Rekomendasi untuk siklus / pembelajaran berikutnya…', true)}
             ${editable ? saveRow('see') : ''}
@@ -688,7 +689,7 @@
       memberIds: (c.members || []).map(m => m.id), status: c.status,
       plan: { tujuan: c.plan.tujuan, desain: c.plan.desain, tanggalRencana: c.plan.tanggalRencana, jamRencana: c.plan.jamRencana, attachments: c.plan.attachments || [] },
       pelaksanaan: { tanggal: c.pelaksanaan.tanggal, jam: c.pelaksanaan.jam, catatan: c.pelaksanaan.catatan, videoLinks: c.pelaksanaan.videoLinks || [], videos: c.pelaksanaan.videos || [], observasiDocs: c.pelaksanaan.observasiDocs || [] },
-      refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi, videos: c.refleksi.videos || [], perangkatDocs: c.refleksi.perangkatDocs || [] }
+      refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi, catatan: c.refleksi.catatan, videos: c.refleksi.videos || [], perangkatDocs: c.refleksi.perangkatDocs || [] }
     };
   }
   async function savePhaseData(c, phase) {

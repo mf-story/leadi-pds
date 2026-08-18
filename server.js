@@ -228,6 +228,7 @@ function cleanCycle(body, existing) {
     refleksi: {
       analisis: str((body.refleksi || {}).analisis, 8000),
       rekomendasi: str((body.refleksi || {}).rekomendasi, 8000),
+      catatan: str((body.refleksi || {}).catatan, 8000),
       videos: existing && existing.refleksi ? (existing.refleksi.videos || []) : [],
       perangkatDocs: existing && existing.refleksi ? (existing.refleksi.perangkatDocs || []) : [],
       observerDocs: existing && existing.refleksi ? (existing.refleksi.observerDocs || []) : []
