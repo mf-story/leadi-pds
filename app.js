@@ -524,7 +524,7 @@
         <div class="panel">
           <div class="panel-head see"><span class="ph-ic">🎬</span> Video</div>
           <div class="panel-body">
-            ${videoThumbs(rv, editable, 'refleksi.videos') || '<div class="file-empty">Belum ada video.</div>'}
+            ${rv.length ? `<div class="file-list">${rv.map(v => `<div class="file-media"><video controls preload="metadata" src="${esc(v.url)}"></video><div class="file-item"><span class="ic">🎬</span><span class="nm">${esc(v.name)}</span><span class="sz">${fmtSize(v.size)}</span>${editable ? `<button type="button" class="x" data-rmvid="${v.id}" data-vidfield="refleksi.videos">✕</button>` : ''}</div></div>`).join('')}</div>` : '<div class="file-empty">Belum ada video.</div>'}
             ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="refleksi.videos"></label>` : ''}
           </div>
         </div>
