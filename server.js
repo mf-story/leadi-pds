@@ -19,8 +19,8 @@ const DATA_DIR = path.join(DATA_ROOT, 'data');
 const UPLOAD_DIR = path.join(DATA_ROOT, 'uploads');
 const DB_FILE = path.join(DATA_DIR, 'db.json');
 const SEED_DIR = path.join(ROOT, 'seed');
-const MAX_BODY = 120 * 1024 * 1024; // 120 MB (mendukung unggah video base64)
-const MAX_FILE = 80 * 1024 * 1024;  // 80 MB per berkas (video pembelajaran)
+const MAX_BODY = 300 * 1024 * 1024; // 300 MB (menampung berkas 200 MB dalam base64)
+const MAX_FILE = 200 * 1024 * 1024; // 200 MB per berkas (video pembelajaran)
 
 // ------------------------------------------------------------------
 // Password (scrypt) & id

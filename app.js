@@ -625,7 +625,7 @@
         uploadIndeterminate('Menyiapkan berkas…');
         let added = 0;
         for (const f of files) {
-          if (f.size > 80 * 1024 * 1024) { toast('“' + f.name + '” melebihi 80 MB', 'err'); continue; }
+          if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
           pendingUploads[key].push({ name: f.name, type: f.type, size: f.size, data: await fileToDataUrl(f) });
           added++;
         }
@@ -733,7 +733,7 @@
   async function uploadObserverDocs(c, files) {
     const atts = [];
     for (const f of files) {
-      if (f.size > 80 * 1024 * 1024) { toast('“' + f.name + '” melebihi 80 MB', 'err'); continue; }
+      if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
       atts.push({ name: f.name, type: f.type, size: f.size, data: await fileToDataUrl(f) });
     }
     if (!atts.length) return;
@@ -818,7 +818,7 @@
     files = Array.from(files);
     if (files.length) uploadIndeterminate('Menyiapkan berkas…');
     for (const f of files) {
-      if (f.size > 80 * 1024 * 1024) { toast('“' + f.name + '” melebihi 80 MB', 'err'); continue; }
+      if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
       const data = await fileToDataUrl(f);
       arr.push({ name: f.name, type: f.type, size: f.size, data });
     }

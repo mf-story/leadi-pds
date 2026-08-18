@@ -70,5 +70,5 @@ uploads/                  Berkas perangkat & video
 - Otorisasi per peran divalidasi di sisi server pada setiap endpoint.
 
 ## Catatan
-- Video besar (hingga 80 MB) diunggah sebagai berkas; streaming mendukung *range request* (seek).
+- Video besar (hingga 200 MB) diunggah sebagai berkas; streaming mendukung *range request* (seek).
 - Untuk akses online/HTTPS (agar bisa dipasang sebagai PWA di HP dari luar jaringan) dapat memakai Cloudflare Tunnel atau reverse proxy — mengikuti pola proyek lain di workspace ini.
