@@ -545,7 +545,7 @@
     return `<div class="field-block"><label>${label}</label><div class="readonly-text${val ? '' : ' empty'}">${val ? fmtDate(val) : 'Belum ditentukan'}</div></div>`;
   }
   function dateTimeField(label, dateKey, timeKey, dateVal, timeVal, editable) {
-    if (editable) return `<div class="field-block"><label>${label}</label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><input type="date" data-field="${dateKey}" value="${dateVal || ''}" style="max-width:200px"><input type="time" data-field="${timeKey}" value="${timeVal || ''}" style="max-width:150px"></div></div>`;
+    if (editable) return `<div class="field-block"><label>${label}</label><div style="display:flex;gap:.5rem;flex-wrap:wrap"><input type="date" data-field="${dateKey}" value="${dateVal || ''}" style="max-width:200px"><input type="text" class="time24" data-field="${timeKey}" value="${timeVal || ''}" placeholder="--:-- (24 jam)" maxlength="5" inputmode="numeric" autocomplete="off" style="max-width:150px"></div></div>`;
     const txt = (dateVal ? fmtDate(dateVal) : 'Belum ditentukan') + (timeVal ? ' · ' + timeVal + ' WITA' : '');
     return `<div class="field-block"><label>${label}</label><div class="readonly-text${dateVal ? '' : ' empty'}">${txt}</div></div>`;
   }
@@ -590,8 +590,27 @@
   function saveRow(phase) { return `<div class="save-row"><button type="button" class="btn btn-primary btn-sm" data-savephase="${phase}">💾 Simpan</button><span class="save-hint" data-savehint="${phase}" hidden>✓ Tersimpan</span></div>`; }
 
   // ---------------- Phase wiring ----------------
+  // Input jam 24 jam (HH:MM) — otomatis sisip titik dua & validasi 00–23:00–59
+  function wireTime24(scope) {
+    $$('.time24', scope).forEach(inp => {
+      inp.addEventListener('input', () => {
+        let v = inp.value.replace(/[^0-9]/g, '').slice(0, 4);
+        if (v.length >= 3) v = v.slice(0, 2) + ':' + v.slice(2);
+        inp.value = v;
+      });
+      inp.addEventListener('blur', () => {
+        if (!inp.value) return;
+        const m = /^(\d{1,2}):?(\d{0,2})$/.exec(inp.value);
+        if (!m) { inp.value = ''; return; }
+        const h = Math.min(23, parseInt(m[1] || '0', 10));
+        const mm = Math.min(59, parseInt(m[2] || '0', 10));
+        inp.value = String(h).padStart(2, '0') + ':' + String(mm).padStart(2, '0');
+      });
+    });
+  }
   function wirePhase(c, view) {
     const body = $('#' + view + 'Body');
+    wireTime24(body);
     $$('[data-upload]', body).forEach(inp => {
       inp.addEventListener('change', async () => {
         const key = inp.dataset.upload;
