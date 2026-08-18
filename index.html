@@ -164,6 +164,7 @@
           <label>Mata pelajaran<input type="text" id="cMapel" maxlength="120" placeholder="mis. Matematika" /></label>
           <label>Kelas<input type="text" id="cKelas" maxlength="60" placeholder="mis. VII-A" /></label>
         </div>
+        <label>Materi ajar<input type="text" id="cMateri" maxlength="200" placeholder="mis. Pecahan dan operasinya" /></label>
         <label>Sekolah mitra<input type="text" id="cSekolah" list="schoolOptions" maxlength="160" placeholder="Pilih atau ketik nama sekolah…" /></label>
         <label>Anggota tim (Guru Observer / Dosen Pengawas / guru lain)</label>
         <div class="member-picker">
@@ -172,16 +173,43 @@
           <div id="memberChips" class="chips-wrap"></div>
         </div>
         <div id="cycleCreateExtras">
-          <label>Catatan / rencana awal
-            <textarea id="cCatatan" rows="3" placeholder="Tujuan, ringkasan rencana, atau catatan awal…"></textarea>
-          </label>
+          <label>Capaian pembelajaran</label>
+          <div class="rte">
+            <div class="rte-toolbar">
+              <button type="button" class="rte-btn" data-cmd="bold" title="Tebal"><b>B</b></button>
+              <button type="button" class="rte-btn" data-cmd="italic" title="Miring"><i>I</i></button>
+              <button type="button" class="rte-btn" data-cmd="underline" title="Garis bawah"><u>U</u></button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Daftar poin">• </button>
+              <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Daftar nomor">1.</button>
+              <button type="button" class="rte-btn" data-block="H3" title="Sub-judul">H</button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" data-cmd="removeFormat" title="Hapus format">⌫</button>
+            </div>
+            <div class="rte-area" id="cCapaianArea" contenteditable="true" data-placeholder="Rumuskan capaian pembelajaran (CP) yang ditargetkan…"></div>
+          </div>
+          <label>Tujuan pembelajaran</label>
+          <div class="rte">
+            <div class="rte-toolbar">
+              <button type="button" class="rte-btn" data-cmd="bold" title="Tebal"><b>B</b></button>
+              <button type="button" class="rte-btn" data-cmd="italic" title="Miring"><i>I</i></button>
+              <button type="button" class="rte-btn" data-cmd="underline" title="Garis bawah"><u>U</u></button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Daftar poin">• </button>
+              <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Daftar nomor">1.</button>
+              <button type="button" class="rte-btn" data-block="H3" title="Sub-judul">H</button>
+              <span class="rte-sep"></span>
+              <button type="button" class="rte-btn" data-cmd="removeFormat" title="Hapus format">⌫</button>
+            </div>
+            <div class="rte-area" id="cTujuanArea" contenteditable="true" data-placeholder="Rumuskan tujuan/kompetensi yang ingin dicapai…"></div>
+          </div>
           <div class="upload-group">
             <label>Dokumen & gambar (perangkat pembelajaran)</label>
             <div class="file-list" id="cDocList"></div>
             <label class="photo-btn">📎 Tambah dokumen/gambar<input type="file" id="cDocInput" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx" multiple hidden /></label>
           </div>
           <div class="upload-group">
-            <label>Video pembelajaran</label>
+            <label>Video</label>
             <div class="file-list" id="cVidList"></div>
             <label class="photo-btn">🎬 Tambah video<input type="file" id="cVidInput" accept="video/*" multiple hidden /></label>
           </div>
@@ -263,6 +291,11 @@
           <label>Jabatan <input type="text" id="uJabatan" maxlength="150" /></label>
           <label>Instansi <input type="text" id="uInstansi" list="schoolOptions" maxlength="160" placeholder="Pilih atau ketik sekolah…" /></label>
         </div>
+        <div class="grid-2" id="uIdRow">
+          <label id="uNipWrap">NIP <input type="text" id="uNip" maxlength="40" inputmode="numeric" /></label>
+          <label id="uNuptkWrap">NUPTK <input type="text" id="uNuptk" maxlength="40" inputmode="numeric" /></label>
+          <label id="uNidnWrap">NIDN <input type="text" id="uNidn" maxlength="40" inputmode="numeric" /></label>
+        </div>
         <p id="userError" class="form-error" hidden></p>
         <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="userModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
       </form>
@@ -275,11 +308,19 @@
   </div>
 
   <div id="previewModal" class="preview-overlay" hidden>
-    <button class="preview-close" data-close="previewModal">✕</button>
+    <div class="preview-topbar">
+      <span id="previewName" class="preview-name"></span>
+      <a id="previewDownload" class="preview-dl" download>⬇️ Unduh</a>
+      <button class="preview-close-btn" data-close="previewModal" aria-label="Tutup">✕</button>
+    </div>
     <div id="previewBody" class="preview-body"></div>
   </div>
 
   <div id="toast" class="toast" hidden></div>
+  <div id="uploadBar" class="upload-bar" hidden>
+    <div class="upload-bar-label" id="uploadBarLabel">Mengunggah…</div>
+    <div class="upload-bar-track"><div class="upload-bar-fill" id="uploadBarFill"></div></div>
+  </div>
   <div id="printReport"></div>
   <datalist id="schoolOptions"></datalist>
 

@@ -195,6 +195,7 @@ function cleanCycle(body, existing) {
     id: existing ? existing.id : uid('cyc'),
     title: str(body.title, 200),
     mapel: str(body.mapel, 120),
+    materi: str(body.materi, 200),
     kelas: str(body.kelas, 60),
     sekolah: str(body.sekolah, 160),
     ownerId: existing ? existing.ownerId : null,
@@ -418,6 +419,9 @@ async function handleApi(req, res, url) {
     if (body.nama != null) me.nama = str(body.nama, 120) || me.nama;
     if (body.jabatan != null) me.jabatan = str(body.jabatan, 150);
     if (body.instansi != null) me.instansi = str(body.instansi, 160);
+    if (body.nip != null) me.nip = str(body.nip, 40);
+    if (body.nuptk != null) me.nuptk = str(body.nuptk, 40);
+    if (body.nidn != null) me.nidn = str(body.nidn, 40);
     processUserPhoto(me, body);
     saveDB();
     return sendJSON(res, 200, { user: publicUser(me) });
@@ -668,6 +672,7 @@ async function handleApi(req, res, url) {
       if (password.length < 4) return sendJSON(res, 400, { error: 'Kata sandi minimal 4 karakter' });
       if (DB.users.some(u => u.username.toLowerCase() === username)) return sendJSON(res, 400, { error: 'Username sudah dipakai' });
       const u = { id: uid('usr'), username, nama, jabatan, instansi, role, password: hashPassword(password), photoUrl: '', createdAt: new Date().toISOString() };
+      u.nip = str(body.nip, 40); u.nuptk = str(body.nuptk, 40); u.nidn = str(body.nidn, 40);
       processUserPhoto(u, body);
       DB.users.push(u);
       saveDB();
@@ -680,6 +685,9 @@ async function handleApi(req, res, url) {
       if (body.nama != null) u.nama = str(body.nama, 120) || u.nama;
       if (body.jabatan != null) u.jabatan = str(body.jabatan, 150);
       if (body.instansi != null) u.instansi = str(body.instansi, 160);
+      if (body.nip != null) u.nip = str(body.nip, 40);
+      if (body.nuptk != null) u.nuptk = str(body.nuptk, 40);
+      if (body.nidn != null) u.nidn = str(body.nidn, 40);
       if (body.role != null && ROLES.includes(body.role)) {
         if (u.role === 'admin' && body.role !== 'admin' && DB.users.filter(x => x.role === 'admin').length <= 1) {
           return sendJSON(res, 400, { error: 'Minimal harus ada satu admin' });
@@ -717,7 +725,7 @@ function memberInfo(ids) {
 }
 function summarizeCycle(c) {
   return {
-    id: c.id, title: c.title, mapel: c.mapel, kelas: c.kelas, sekolah: c.sekolah,
+    id: c.id, title: c.title, mapel: c.mapel, materi: c.materi || '', kelas: c.kelas, sekolah: c.sekolah,
     ownerId: c.ownerId, ownerName: c.ownerName, status: c.status,
     memberCount: (c.memberIds || []).length,
     entryCount: (c.entries || []).length,

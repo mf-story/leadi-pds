@@ -34,6 +34,33 @@
     toast('Sesi berakhir, silakan masuk kembali', 'err');
   }
 
+  // Unggah dgn progres (XHR mendukung upload.onprogress; fetch tidak)
+  function apiUpload(method, path, body, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open(method, '/api' + path);
+      xhr.setRequestHeader('Content-Type', 'application/json');
+      const t = token(); if (t) xhr.setRequestHeader('Authorization', 'Bearer ' + t);
+      xhr.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+      xhr.onload = () => {
+        let data = {}; try { data = JSON.parse(xhr.responseText); } catch {}
+        if (xhr.status === 401 && state.user) { handleExpired(); return reject(new Error(data.error || 'Sesi berakhir')); }
+        if (xhr.status < 200 || xhr.status >= 300) return reject(new Error(data.error || 'Terjadi kesalahan'));
+        resolve(data);
+      };
+      xhr.onerror = () => reject(new Error('Gagal terhubung ke server'));
+      xhr.send(body ? JSON.stringify(body) : undefined);
+    });
+  }
+  function showUploadProgress(label) { const b = $('#uploadBar'); b.className = 'upload-bar'; $('#uploadBarLabel').textContent = label || 'Mengunggah…'; $('#uploadBarFill').style.width = '0%'; b.hidden = false; }
+  function setUploadProgress(frac) { const pct = Math.round((frac || 0) * 100); $('#uploadBarFill').style.width = pct + '%'; $('#uploadBarLabel').textContent = 'Mengunggah… ' + pct + '%'; }
+  function uploadIndeterminate(label) { const b = $('#uploadBar'); b.className = 'upload-bar indeterminate'; $('#uploadBarLabel').textContent = label || 'Menyiapkan berkas…'; b.hidden = false; }
+  function hideUploadProgress(successMsg) {
+    const b = $('#uploadBar');
+    if (successMsg) { b.className = 'upload-bar success'; $('#uploadBarFill').style.width = '100%'; $('#uploadBarLabel').textContent = successMsg; clearTimeout(b._t); b._t = setTimeout(() => { b.hidden = true; }, 2400); }
+    else b.hidden = true;
+  }
+
   // ---------------- Helpers ----------------
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
   function initials(name) { const p = String(name || '').replace(/[^\p{L}\p{N}\s]/gu, '').trim().split(/\s+/).filter(Boolean); return p.length ? (p[0][0] + (p[1] ? p[1][0] : '')).toUpperCase() : '?'; }
@@ -46,6 +73,29 @@
   function isPdf(t, url) { return (t || '').includes('pdf') || /\.pdf$/i.test(url || ''); }
   function isVideoFile(t, url) { return /^video\//.test(t || '') || /\.(mp4|webm|ogg|mov)$/i.test(url || ''); }
   function attIcon(a) { if (isImage(a.type)) return '🖼️'; if (isPdf(a.type, a.url)) return '📕'; if (isVideoFile(a.type, a.url)) return '🎬'; if (/word|doc/i.test(a.type)) return '📘'; if (/sheet|excel|xls/i.test(a.type)) return '📗'; if (/presentation|ppt/i.test(a.type)) return '📙'; return '📎'; }
+
+  // ---- Rich text (editor mirip MS Word) ----
+  const RTE_ALLOWED = { B: 1, STRONG: 1, I: 1, EM: 1, U: 1, S: 1, P: 1, BR: 1, UL: 1, OL: 1, LI: 1, H3: 1, H4: 1, BLOCKQUOTE: 1, DIV: 1, SPAN: 1, A: 1 };
+  function sanitizeHtml(html) {
+    const root = document.createElement('div');
+    root.innerHTML = html || '';
+    (function walk(node) {
+      for (const ch of Array.from(node.childNodes)) {
+        if (ch.nodeType === 1) {
+          if (!RTE_ALLOWED[ch.tagName]) { while (ch.firstChild) node.insertBefore(ch.firstChild, ch); node.removeChild(ch); continue; }
+          for (const attr of Array.from(ch.attributes)) {
+            if (ch.tagName === 'A' && attr.name === 'href' && /^(https?:|mailto:)/i.test(attr.value)) continue;
+            ch.removeAttribute(attr.name);
+          }
+          if (ch.tagName === 'A') { ch.setAttribute('target', '_blank'); ch.setAttribute('rel', 'noopener'); }
+          walk(ch);
+        } else if (ch.nodeType === 8) { node.removeChild(ch); }
+      }
+    })(root);
+    return root.innerHTML;
+  }
+  function isHtml(s) { return /<[a-z][\s\S]*>/i.test(s || ''); }
+  function richDisplay(s) { if (!s) return ''; return isHtml(s) ? sanitizeHtml(s) : esc(s).replace(/\n/g, '<br>'); }
 
   const can = {
     edit(c) { const u = state.user; if (!u || !c) return false; if (u.role === 'admin') return true; return c.ownerId === u.id; },
@@ -111,6 +161,7 @@
     $$('.topnav-tab').forEach(t => t.classList.toggle('active', t.dataset.nav === view));
     const isPhase = !!PHASE_VIEWS[view];
     $('#cycleContext').hidden = !isPhase;
+    if (isPhase) startEntriesPoll(); else stopEntriesPoll();
     if (view === 'dashboard') renderDashboard();
     else if (isPhase) renderPhaseView(view);
     else if (view === 'repo') loadRepo();
@@ -122,7 +173,20 @@
     const nav = e.target.closest('[data-nav]');
     if (nav) { closeDrawer(); navigate(nav.dataset.nav); return; }
     const close = e.target.closest('[data-close]');
-    if (close) { $('#' + close.dataset.close).hidden = true; }
+    if (close) { $('#' + close.dataset.close).hidden = true; return; }
+    // Buka-tutup panel (klik judul panel)
+    const head = e.target.closest('.panel-head');
+    if (head && head.parentElement.classList.contains('panel')) head.parentElement.classList.toggle('collapsed');
+  });
+  // Toolbar editor teks kaya (global: berlaku utk fase & modal)
+  document.addEventListener('mousedown', e => { if (e.target.closest('.rte-btn')) e.preventDefault(); });
+  document.addEventListener('click', e => {
+    const btn = e.target.closest('.rte-btn'); if (!btn) return;
+    const rte = btn.closest('.rte'); if (!rte) return;
+    const area = rte.querySelector('.rte-area'); if (!area) return;
+    area.focus();
+    if (btn.dataset.block) document.execCommand('formatBlock', false, btn.dataset.block);
+    else document.execCommand(btn.dataset.cmd, false, null);
   });
 
   // drawer
@@ -167,7 +231,7 @@
     return `<div class="cycle-card st-${c.status}" data-open="${c.id}">
       <div class="cycle-foot" style="margin:0"><span class="status-pill ${c.status}">${STATUS_LABEL[c.status]}</span>${c.published ? '<span class="badge-pub">🏆 Praktik Baik</span>' : ''}</div>
       <h4>${esc(c.title)}</h4>
-      <div class="cycle-meta">${c.mapel ? `<span>📚 ${esc(c.mapel)}</span>` : ''}${c.kelas ? `<span>🎓 ${esc(c.kelas)}</span>` : ''}${c.sekolah ? `<span>🏫 ${esc(c.sekolah)}</span>` : ''}</div>
+      <div class="cycle-meta">${c.mapel ? `<span>📚 ${esc(c.mapel)}</span>` : ''}${c.materi ? `<span>📖 ${esc(c.materi)}</span>` : ''}${c.kelas ? `<span>🎓 ${esc(c.kelas)}</span>` : ''}${c.sekolah ? `<span>🏫 ${esc(c.sekolah)}</span>` : ''}</div>
       <div class="cycle-foot"><span class="tag owner">👤 ${esc(c.ownerName || '')}</span><span class="muted" style="font-size:.75rem">👥 ${c.memberCount} · 💬 ${c.entryCount}</span></div>
     </div>`;
   }
@@ -261,7 +325,7 @@
   function metaBar(c) {
     return `<div class="phase-meta-bar">
       <span><b>${esc(c.title)}</b></span>
-      ${c.mapel ? `<span>📚 ${esc(c.mapel)}</span>` : ''}${c.kelas ? `<span>🎓 ${esc(c.kelas)}</span>` : ''}${c.sekolah ? `<span>🏫 ${esc(c.sekolah)}</span>` : ''}
+      ${c.mapel ? `<span>📚 ${esc(c.mapel)}</span>` : ''}${c.materi ? `<span>📖 ${esc(c.materi)}</span>` : ''}${c.kelas ? `<span>🎓 ${esc(c.kelas)}</span>` : ''}${c.sekolah ? `<span>🏫 ${esc(c.sekolah)}</span>` : ''}
       <span>👤 ${esc(c.ownerName)}</span>
     </div>`;
   }
@@ -287,12 +351,12 @@
   // Panel acuan ringkas (fase terdahulu terbawa ke fase berikutnya)
   function refRow(label, val, fmt) {
     const has = val != null && val !== '';
-    return `<div class="ref-row"><span class="ref-label">${label}</span><div class="ref-val${has ? '' : ' empty'}">${has ? (fmt ? fmt(val) : esc(val)) : '— belum diisi'}</div></div>`;
+    return `<div class="ref-row"><span class="ref-label">${label}</span><div class="ref-val${has ? '' : ' empty'}">${has ? (fmt ? fmt(val) : richDisplay(val)) : '— belum diisi'}</div></div>`;
   }
   function planRefPanel(c) {
     const p = c.plan || {};
     const jadwal = p.tanggalRencana ? fmtDate(p.tanggalRencana) + (p.jamRencana ? ' · ' + p.jamRencana + ' WITA' : '') : '';
-    return `<div class="panel"><div class="panel-head plan"><span class="ph-ic">📋</span> Acuan Rencana (Plan)</div><div class="panel-body ref-body">${refRow('Tujuan pembelajaran', p.tujuan)}${refRow('Lesson design', p.desain)}${refRow('Rencana open class', jadwal)}</div></div>`;
+    return `<div class="panel"><div class="panel-head plan"><span class="ph-ic">📋</span> Acuan Rencana (Plan)</div><div class="panel-body ref-body">${refRow('Capaian pembelajaran', p.desain)}${refRow('Tujuan pembelajaran', p.tujuan)}${refRow('Rencana open class', jadwal)}</div></div>`;
   }
   function doRefPanel(c) {
     const d = c.pelaksanaan || {};
@@ -303,33 +367,53 @@
   // PLAN
   function planView(c, editable) {
     const p = c.plan || {};
+    const atts = p.attachments || [];
+    const videos = atts.filter(a => isVideoFile(a.type, a.url));
+    const docs = atts.filter(a => !isVideoFile(a.type, a.url));
     return `${metaBar(c)}${phaseStepper(c, 'plan')}<div class="phase-layout">
       <div class="phase-main">
         <div class="panel">
           <div class="panel-head plan"><span class="ph-ic">📝</span> Rencana Pembelajaran${c.mapel ? ' — ' + esc(c.mapel) : ''}</div>
           <div class="panel-body">
             ${dateTimeField('Rencana open class', 'plan.tanggalRencana', 'plan.jamRencana', p.tanggalRencana, p.jamRencana, editable)}
-            ${textField('Tujuan pembelajaran', 'plan.tujuan', p.tujuan, editable, 'Rumuskan tujuan/kompetensi yang ingin dicapai…')}
-            ${textField('Lesson design / skenario', 'plan.desain', p.desain, editable, 'Uraikan alur pembelajaran, kegiatan inti, antisipasi respon siswa…', true)}
+            ${richField('Capaian pembelajaran', 'plan.desain', p.desain, editable, 'Rumuskan capaian pembelajaran (CP) yang ditargetkan…')}
+            ${richField('Tujuan pembelajaran', 'plan.tujuan', p.tujuan, editable, 'Rumuskan tujuan/kompetensi yang ingin dicapai…')}
             ${editable ? saveRow('plan') : ''}
           </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head plan"><span class="ph-ic">🎬</span> Video</div>
+          <div class="panel-body">
+            ${videos.length ? `<div class="file-list">${videos.map(v => videoPlayerItem(v, editable)).join('')}</div>` : '<div class="file-empty">Belum ada video.</div>'}
+            ${editable ? `<label class="add-file-btn">🎬 Tambah video<input type="file" hidden accept="video/*" data-upload="plan.attachments"></label>` : ''}
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head plan"><span class="ph-ic">💬</span> Komentar</div>
+          <div class="panel-body">${threadHtml(c, 'plan', can.contribute(c))}</div>
         </div>
       </div>
       <div class="phase-side">
         <div class="panel">
           <div class="panel-head plan"><span class="ph-ic">📎</span> Perangkat Pembelajaran</div>
           <div class="panel-body">
-            ${filesHtml(p.attachments, editable)}
-            ${editable ? `<label class="add-file-btn">➕ Tambah berkas<input type="file" hidden multiple data-upload="plan.attachments"></label>` : ''}
+            ${docsHtml(docs, editable)}
+            ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="plan.attachments"></label>` : ''}
           </div>
-        </div>
-        <div class="panel">
-          <div class="panel-head plan"><span class="ph-ic">💬</span> Catatan Kolaboratif</div>
-          <div class="panel-body">${threadHtml(c, 'plan', can.contribute(c))}</div>
         </div>
         ${membersPanel(c)}
       </div>
     </div>`;
+  }
+  // Pemutar video inline (panel utama Plan)
+  function videoPlayerItem(v, editable) {
+    return `<div class="file-media"><video controls preload="metadata" src="${esc(v.url)}"></video><div class="file-item"><span class="ic">🎬</span><span class="nm">${esc(v.name)}</span><span class="sz">${fmtSize(v.size)}</span>${editable ? `<button type="button" class="x" data-rmatt="${v.id}">✕</button>` : ''}</div></div>`;
+  }
+  // Daftar dokumen (Perangkat Pembelajaran) — klik nama untuk pratinjau di aplikasi, ikon unduh untuk mengunduh
+  function docsHtml(list, editable) {
+    list = list || [];
+    if (!list.length) return `<div class="file-empty">Belum ada dokumen.</div>`;
+    return `<div class="file-list">${list.map(a => `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}" data-name="${esc(a.name)}" title="Buka ${esc(a.name)}">${esc(a.name)}</span><span class="sz">${fmtSize(a.size)}</span><a class="file-dl" href="${esc(a.url)}" download="${esc(a.name)}" title="Unduh">⬇️</a>${editable ? `<button type="button" class="x" data-rmatt="${a.id}">✕</button>` : ''}</div>`).join('')}</div>`;
   }
 
   // DO
@@ -403,6 +487,25 @@
     if (editable) return `<div class="field-block"><label>${label}</label><textarea data-field="${key}" rows="${big ? 4 : 2}" placeholder="${esc(ph || '')}">${esc(val || '')}</textarea></div>`;
     return `<div class="field-block"><label>${label}</label><div class="readonly-text${val ? '' : ' empty'}">${val ? esc(val) : 'Belum diisi'}</div></div>`;
   }
+  // Editor teks kaya (mirip MS Word)
+  function richField(label, key, val, editable, ph) {
+    if (!editable) return `<div class="field-block"><label>${label}</label><div class="readonly-text${val ? '' : ' empty'}">${val ? richDisplay(val) : 'Belum diisi'}</div></div>`;
+    return `<div class="field-block"><label>${label}</label>
+      <div class="rte">
+        <div class="rte-toolbar">
+          <button type="button" class="rte-btn" data-cmd="bold" title="Tebal"><b>B</b></button>
+          <button type="button" class="rte-btn" data-cmd="italic" title="Miring"><i>I</i></button>
+          <button type="button" class="rte-btn" data-cmd="underline" title="Garis bawah"><u>U</u></button>
+          <span class="rte-sep"></span>
+          <button type="button" class="rte-btn" data-cmd="insertUnorderedList" title="Daftar poin">• </button>
+          <button type="button" class="rte-btn" data-cmd="insertOrderedList" title="Daftar nomor">1.</button>
+          <button type="button" class="rte-btn" data-block="H3" title="Sub-judul">H</button>
+          <span class="rte-sep"></span>
+          <button type="button" class="rte-btn" data-cmd="removeFormat" title="Hapus format">⌫</button>
+        </div>
+        <div class="rte-area" contenteditable="true" data-richfield="${key}" data-placeholder="${esc(ph || '')}">${richDisplay(val)}</div>
+      </div></div>`;
+  }
   function dateField(label, key, val, editable) {
     if (editable) return `<div class="field-block"><label>${label}</label><input type="date" data-field="${key}" value="${val || ''}" style="max-width:220px"></div>`;
     return `<div class="field-block"><label>${label}</label><div class="readonly-text${val ? '' : ' empty'}">${val ? fmtDate(val) : 'Belum ditentukan'}</div></div>`;
@@ -415,7 +518,15 @@
   function filesHtml(list, editable) {
     list = list || [];
     if (!list.length) return `<div class="file-empty">Belum ada berkas.</div>`;
-    return `<div class="file-list">${list.map(a => `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}">${esc(a.name)}</span><span class="sz">${fmtSize(a.size)}</span>${editable ? `<button type="button" class="x" data-rmatt="${a.id}">✕</button>` : ''}</div>`).join('')}</div>`;
+    return `<div class="file-list">${list.map(a => fileItem(a, editable)).join('')}</div>`;
+  }
+  function fileItem(a, editable) {
+    const rm = editable ? `<button type="button" class="x" data-rmatt="${a.id}">✕</button>` : '';
+    const meta = `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}">${esc(a.name)}</span><span class="sz">${fmtSize(a.size)}</span>${rm}</div>`;
+    // Video & gambar tampil langsung (inline)
+    if (isVideoFile(a.type, a.url)) return `<div class="file-media"><video controls preload="metadata" src="${esc(a.url)}"></video>${meta}</div>`;
+    if (isImage(a.type)) return `<div class="file-media"><img class="file-img" src="${esc(a.url)}" alt="" data-preview="${esc(a.url)}" data-type="${esc(a.type)}">${meta}</div>`;
+    return meta;
   }
   function videoThumbs(list) {
     list = list || []; if (!list.length) return '';
@@ -450,40 +561,50 @@
     $$('[data-upload]', body).forEach(inp => {
       inp.addEventListener('change', async () => {
         const key = inp.dataset.upload;
-        for (const f of inp.files) {
-          if (f.size > 80 * 1024 * 1024) { toast(f.name + ' melebihi 80 MB', 'err'); continue; }
-          const dataUrl = await fileToDataUrl(f);
-          pendingUploads[key].push({ name: f.name, type: f.type, size: f.size, data: dataUrl });
-          toast('“' + f.name + '” siap disimpan. Tekan Simpan.', 'ok');
+        const files = Array.from(inp.files); inp.value = '';
+        if (!files.length) return;
+        uploadIndeterminate('Menyiapkan berkas…');
+        let added = 0;
+        for (const f of files) {
+          if (f.size > 80 * 1024 * 1024) { toast('“' + f.name + '” melebihi 80 MB', 'err'); continue; }
+          pendingUploads[key].push({ name: f.name, type: f.type, size: f.size, data: await fileToDataUrl(f) });
+          added++;
         }
-        inp.value = '';
+        if (added) await savePhaseData(c, view);
+        else hideUploadProgress();
       });
     });
-    body.addEventListener('click', async ev => {
-      const rmAtt = ev.target.closest('[data-rmatt]');
-      const rmVl = ev.target.closest('[data-rmvl]');
-      const rment = ev.target.closest('[data-rment]');
-      const prev = ev.target.closest('[data-preview]');
-      const savePhase = ev.target.closest('[data-savephase]');
-      const sendEntry = ev.target.closest('[data-sendentry]');
-      const addVl = ev.target.closest('#addVideoLink');
-      if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, 'plan'); }
-      else if (rmVl) { c.pelaksanaan.videoLinks = (c.pelaksanaan.videoLinks || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, 'do'); }
-      else if (rment) { await deleteEntry(c, rment.dataset.rment); }
-      else if (prev) { openPreview(prev.dataset.preview, prev.dataset.type); }
-      else if (savePhase) { await savePhaseData(c, savePhase.dataset.savephase); }
-      else if (sendEntry) { await sendEntry_(c, sendEntry.dataset.sendentry); }
-      else if (addVl) { addVideoLink(c); }
-    });
   }
+  // Handler klik panel fase — dipasang SEKALI per body (bukan tiap render) agar tidak menumpuk
+  async function onPhaseBodyClick(ev) {
+    const c = state.current; if (!c) return;
+    const rmAtt = ev.target.closest('[data-rmatt]');
+    const rmVl = ev.target.closest('[data-rmvl]');
+    const rment = ev.target.closest('[data-rment]');
+    const prev = ev.target.closest('[data-preview]');
+    const savePhase = ev.target.closest('[data-savephase]');
+    const sendEntry = ev.target.closest('[data-sendentry]');
+    const addVl = ev.target.closest('#addVideoLink');
+    if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
+    else if (rmVl) { c.pelaksanaan.videoLinks = (c.pelaksanaan.videoLinks || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
+    else if (rment) { await deleteEntry(c, rment.dataset.rment); }
+    else if (prev) { openPreview(prev.dataset.preview, prev.dataset.type, prev.dataset.name); }
+    else if (savePhase) { await savePhaseData(c, savePhase.dataset.savephase); }
+    else if (sendEntry) { await sendEntry_(c, sendEntry.dataset.sendentry); }
+    else if (addVl) { addVideoLink(c); }
+  }
+  ['plan', 'do', 'see'].forEach(v => { const el = document.getElementById(v + 'Body'); if (el) el.addEventListener('click', onPhaseBodyClick); });
   function collectFields(c) {
     $$('#view-' + state.view + ' [data-field]').forEach(el => {
       const [group, key] = el.dataset.field.split('.'); if (!c[group]) c[group] = {}; c[group][key] = el.value;
     });
+    $$('#view-' + state.view + ' [data-richfield]').forEach(el => {
+      const [group, key] = el.dataset.richfield.split('.'); if (!c[group]) c[group] = {}; c[group][key] = sanitizeHtml(el.innerHTML);
+    });
   }
   function buildCyclePayload(c) {
     return {
-      title: c.title, mapel: c.mapel, kelas: c.kelas, sekolah: c.sekolah,
+      title: c.title, mapel: c.mapel, materi: c.materi, kelas: c.kelas, sekolah: c.sekolah,
       memberIds: (c.members || []).map(m => m.id), status: c.status,
       plan: { tujuan: c.plan.tujuan, desain: c.plan.desain, tanggalRencana: c.plan.tanggalRencana, jamRencana: c.plan.jamRencana, attachments: c.plan.attachments || [] },
       pelaksanaan: { tanggal: c.pelaksanaan.tanggal, jam: c.pelaksanaan.jam, catatan: c.pelaksanaan.catatan, videoLinks: c.pelaksanaan.videoLinks || [], videos: c.pelaksanaan.videos || [] },
@@ -495,14 +616,22 @@
     const payload = buildCyclePayload(c);
     payload.plan.attachments = [...(c.plan.attachments || []), ...pendingUploads['plan.attachments']];
     payload.pelaksanaan.videos = [...(c.pelaksanaan.videos || []), ...pendingUploads['pelaksanaan.videos']];
+    const hasNew = pendingUploads['plan.attachments'].length || pendingUploads['pelaksanaan.videos'].length;
     try {
-      const d = await api('PUT', '/cycles/' + c.id, payload);
+      let d;
+      if (hasNew) {
+        showUploadProgress('Mengunggah… 0%');
+        d = await apiUpload('PUT', '/cycles/' + c.id, payload, setUploadProgress);
+        hideUploadProgress('✅ Berkas berhasil diunggah');
+      } else {
+        d = await api('PUT', '/cycles/' + c.id, payload);
+      }
       state.current = d.cycle; pendingUploads = { 'plan.attachments': [], 'pelaksanaan.videos': [] };
       await loadCycles();
       await renderPhaseView(state.view);
       const hint = $(`[data-savehint="${phase}"]`); if (hint) { hint.hidden = false; setTimeout(() => { hint.hidden = true; }, 2000); }
-      toast('Perubahan tersimpan', 'ok');
-    } catch (ex) { toast(ex.message, 'err'); }
+      if (!hasNew) toast('Perubahan tersimpan', 'ok');
+    } catch (ex) { hideUploadProgress(); toast(ex.message, 'err'); }
   }
   function addVideoLink(c) {
     const title = ($('#vlTitle') || {}).value ? $('#vlTitle').value.trim() : '';
@@ -528,6 +657,29 @@
     try { await api('DELETE', '/cycles/' + c.id + '/entries/' + eid); const d = await api('GET', '/cycles/' + c.id); state.current = d.cycle; await renderPhaseView(state.view); }
     catch (ex) { toast(ex.message, 'err'); }
   }
+
+  // Poll komentar/kontribusi terbaru (muncul otomatis tanpa refresh manual)
+  let entriesPollTimer = null;
+  function startEntriesPoll() { stopEntriesPoll(); entriesPollTimer = setInterval(pollEntries, 8000); }
+  function stopEntriesPoll() { if (entriesPollTimer) clearInterval(entriesPollTimer); entriesPollTimer = null; }
+  async function pollEntries() {
+    if (!state.user || document.hidden || !PHASE_VIEWS[state.view] || !state.activeId) return;
+    if (!state.current || state.current.id !== state.activeId) return;
+    try {
+      const d = await api('GET', '/cycles/' + state.activeId);
+      const fresh = d.cycle;
+      if (!fresh || fresh.id !== state.activeId || state.view && !PHASE_VIEWS[state.view]) return;
+      if (!state.current || state.current.id !== fresh.id) return;
+      const phase = state.view;
+      const oldIds = (state.current.entries || []).filter(e => e.phase === phase).map(e => e.id).join();
+      const newList = (fresh.entries || []).filter(e => e.phase === phase);
+      state.current.entries = fresh.entries; // sinkronkan data komentar terbaru
+      if (oldIds === newList.map(e => e.id).join()) return; // tak ada perubahan
+      const bodyEl = $('#' + state.view + 'Body');
+      const threadEl = bodyEl ? bodyEl.querySelector('.thread') : null;
+      if (threadEl) threadEl.innerHTML = newList.length ? newList.map(entryHtml).join('') : `<div class="entry-empty">Belum ada catatan.</div>`;
+    } catch {}
+  }
   async function advancePhase(c) {
     const next = { plan: 'do', do: 'see', see: 'selesai' }[c.status]; if (!next) return;
     if (!confirm('Lanjut ke tahap ' + STATUS_LABEL[next] + '?')) return;
@@ -550,13 +702,14 @@
     const editing = !!c;
     $('#cycleModalTitle').textContent = editing ? 'Ubah Info Siklus' : 'Siklus Baru';
     $('#cTitle').value = editing ? c.title : ''; $('#cMapel').value = editing ? c.mapel : '';
+    $('#cMateri').value = editing ? (c.materi || '') : '';
     $('#cKelas').value = editing ? c.kelas : ''; $('#cSekolah').value = editing ? c.sekolah : '';
     state.selectedMembers = editing ? (c.members || []).map(m => ({ id: m.id, nama: m.nama, role: m.role })) : [];
     $('#cycleForm').dataset.editId = editing ? c.id : '';
     $('#memberSearch').value = ''; $('#memberOptions').hidden = true; renderMemberChips();
     // Kolom catatan & unggahan hanya utk siklus BARU (saat ubah info, isi diedit di tab Plan/Do)
     $('#cycleCreateExtras').hidden = editing;
-    $('#cCatatan').value = ''; cycleDocs = []; cycleVids = [];
+    $('#cCapaianArea').innerHTML = ''; $('#cTujuanArea').innerHTML = ''; cycleDocs = []; cycleVids = [];
     $('#cDocInput').value = ''; $('#cVidInput').value = ''; renderCreateFiles();
     $('#cycleError').hidden = true; $('#cycleModal').hidden = false;
   }
@@ -568,11 +721,14 @@
     $('#cVidList').innerHTML = cycleVids.map((f, i) => chip(f, i, 'vid')).join('');
   }
   async function addCreateFiles(files, arr) {
+    files = Array.from(files);
+    if (files.length) uploadIndeterminate('Menyiapkan berkas…');
     for (const f of files) {
       if (f.size > 80 * 1024 * 1024) { toast('“' + f.name + '” melebihi 80 MB', 'err'); continue; }
       const data = await fileToDataUrl(f);
       arr.push({ name: f.name, type: f.type, size: f.size, data });
     }
+    hideUploadProgress();
     renderCreateFiles();
   }
   $('#cDocInput').addEventListener('change', async e => { await addCreateFiles(e.target.files, cycleDocs); e.target.value = ''; });
@@ -603,7 +759,7 @@
   $('#cycleForm').addEventListener('submit', async e => {
     e.preventDefault(); const err = $('#cycleError'); err.hidden = true;
     const editId = $('#cycleForm').dataset.editId;
-    const payload = { title: $('#cTitle').value, mapel: $('#cMapel').value, kelas: $('#cKelas').value, sekolah: $('#cSekolah').value, memberIds: state.selectedMembers.map(m => m.id) };
+    const payload = { title: $('#cTitle').value, mapel: $('#cMapel').value, materi: $('#cMateri').value, kelas: $('#cKelas').value, sekolah: $('#cSekolah').value, memberIds: state.selectedMembers.map(m => m.id) };
     try {
       if (editId) {
         const base = buildCyclePayload(state.current); Object.assign(base, payload);
@@ -612,15 +768,18 @@
         if (PHASE_VIEWS[state.view]) await renderPhaseView(state.view); else renderDashboard();
         toast('Tersimpan', 'ok');
       } else {
-        // Siklus baru: sertakan catatan (plan) + unggahan dokumen/gambar & video
-        payload.plan = { desain: $('#cCatatan').value, attachments: cycleDocs };
-        payload.pelaksanaan = { videos: cycleVids };
-        const d = await api('POST', '/cycles', payload); await loadCycles();
+        // Siklus baru: capaian & tujuan (rich text) + semua unggahan masuk ke perangkat Plan
+        payload.plan = { desain: sanitizeHtml($('#cCapaianArea').innerHTML), tujuan: sanitizeHtml($('#cTujuanArea').innerHTML), attachments: [...cycleDocs, ...cycleVids] };
+        const hasFiles = cycleDocs.length || cycleVids.length;
+        let d;
+        if (hasFiles) { showUploadProgress('Mengunggah… 0%'); d = await apiUpload('POST', '/cycles', payload, setUploadProgress); hideUploadProgress('✅ Siklus & berkas berhasil diunggah'); }
+        else d = await api('POST', '/cycles', payload);
+        await loadCycles();
         $('#cycleModal').hidden = true;
         state.activeId = d.cycle.id; state.current = null; localStorage.setItem(ACTIVE_KEY, state.activeId);
-        navigate('plan'); toast('Siklus dibuat', 'ok');
+        navigate('plan'); if (!hasFiles) toast('Siklus dibuat', 'ok');
       }
-    } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+    } catch (ex) { hideUploadProgress(); err.textContent = ex.message; err.hidden = false; }
   });
 
   // ---------------- Publish ----------------
@@ -665,11 +824,22 @@
   function renderUsers() {
     $('#userList').innerHTML = (state._users || []).map(u => `
       <div class="user-item"><div class="u-ava">${u.photoUrl ? `<img src="${esc(u.photoUrl)}" alt="">` : initials(u.nama)}</div>
-        <div class="u-main"><b>${esc(u.nama)} <span class="role-tag ${u.role}">${ROLE_LABEL[u.role]}</span></b><div class="u-sub">@${esc(u.username)}${u.jabatan ? ' · ' + esc(u.jabatan) : ''}${u.instansi ? ' · ' + esc(u.instansi) : ''}</div></div>
+        <div class="u-main"><b>${esc(u.nama)} <span class="role-tag ${u.role}">${ROLE_LABEL[u.role]}</span></b><div class="u-sub">@${esc(u.username)}${u.jabatan ? ' · ' + esc(u.jabatan) : ''}${u.instansi ? ' · ' + esc(u.instansi) : ''}${u.nip ? ' · NIP ' + esc(u.nip) : ''}${u.nuptk ? ' · NUPTK ' + esc(u.nuptk) : ''}${u.nidn ? ' · NIDN ' + esc(u.nidn) : ''}</div></div>
         <div class="u-actions"><button class="btn btn-ghost btn-sm" data-edituser="${u.id}">✎</button>${u.id !== state.user.id ? `<button class="btn btn-danger btn-sm" data-deluser="${u.id}">🗑</button>` : ''}</div>
       </div>`).join('');
   }
   $('#newUserBtn').addEventListener('click', () => openUserForm(null));
+  // Tampilkan NIP/NUPTK/NIDN sesuai peran
+  function updateUserRoleFields() {
+    const role = $('#uRole').value;
+    const isGuru = role === 'guru' || role === 'observer';
+    const isDosen = role === 'dosen';
+    $('#uNipWrap').hidden = !(isGuru || isDosen);
+    $('#uNuptkWrap').hidden = !isGuru;
+    $('#uNidnWrap').hidden = !isDosen;
+    $('#uIdRow').hidden = !(isGuru || isDosen);
+  }
+  $('#uRole').addEventListener('change', updateUserRoleFields);
   let userPhoto = { data: null, remove: false };
   function openUserForm(u) {
     $('#userModalTitle').textContent = u ? 'Ubah Pengguna' : 'Pengguna Baru';
@@ -678,6 +848,8 @@
     $('#uUsername').value = u ? u.username : ''; $('#uUsername').disabled = !!u;
     $('#uPassword').value = ''; $('#uPassword').placeholder = u ? 'kosongkan bila tetap' : 'min. 4 karakter';
     $('#uJabatan').value = u ? (u.jabatan || '') : ''; $('#uInstansi').value = u ? (u.instansi || '') : '';
+    $('#uNip').value = u ? (u.nip || '') : ''; $('#uNuptk').value = u ? (u.nuptk || '') : ''; $('#uNidn').value = u ? (u.nidn || '') : '';
+    updateUserRoleFields();
     userPhoto = { data: null, remove: false };
     setPhotoPreview($('#uPhotoPreview'), u && u.photoUrl ? u.photoUrl : '', u ? u.nama : '');
     $('#uPhotoRemove').hidden = !(u && u.photoUrl);
@@ -707,6 +879,10 @@
     e.preventDefault(); const err = $('#userError'); err.hidden = true;
     const id = $('#userForm').dataset.editId;
     const payload = { nama: $('#uNama').value, role: $('#uRole').value, jabatan: $('#uJabatan').value, instansi: $('#uInstansi').value };
+    const role = $('#uRole').value;
+    payload.nip = (role === 'guru' || role === 'observer' || role === 'dosen') ? $('#uNip').value : '';
+    payload.nuptk = (role === 'guru' || role === 'observer') ? $('#uNuptk').value : '';
+    payload.nidn = role === 'dosen' ? $('#uNidn').value : '';
     const pw = $('#uPassword').value; if (pw) payload.password = pw;
     if (userPhoto.data) payload.photo = userPhoto.data; else if (userPhoto.remove) payload.removePhoto = true;
     try {
@@ -809,7 +985,7 @@
   async function doLogout() {
     try { await api('POST', '/logout'); } catch {}
     localStorage.removeItem(TOKEN_KEY); state.user = null;
-    if (state.notifTimer) clearInterval(state.notifTimer);
+    if (state.notifTimer) clearInterval(state.notifTimer); stopEntriesPoll();
     $('#accountModal').hidden = true; $('#app').hidden = true; $('#loginScreen').hidden = false; $('#loginPass').value = '';
   }
 
@@ -836,12 +1012,16 @@
   });
 
   // ---------------- Preview ----------------
-  function openPreview(url, type) {
+  function isOffice(t, url) { return /\.(docx?|xlsx?|pptx?)$/i.test(url || '') || /officedocument|msword|ms-excel|ms-powerpoint/i.test(t || ''); }
+  function openPreview(url, type, name) {
     const body = $('#previewBody');
+    const dl = $('#previewDownload'); dl.href = url; dl.setAttribute('download', name || '');
+    $('#previewName').textContent = name || '';
     if (isImage(type)) body.innerHTML = `<img src="${esc(url)}" alt="">`;
     else if (isPdf(type, url)) body.innerHTML = `<iframe src="${esc(url)}"></iframe>`;
     else if (isVideoFile(type, url)) body.innerHTML = `<video src="${esc(url)}" controls autoplay></video>`;
-    else { window.open(url, '_blank'); return; }
+    else if (isOffice(type, url)) body.innerHTML = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(location.origin + url)}"></iframe><div class="preview-note">Jika dokumen tidak tampil (mis. saat diakses lewat localhost), silakan gunakan tombol ⬇️ Unduh.</div>`;
+    else body.innerHTML = `<div class="preview-fallback">Pratinjau tidak tersedia untuk jenis berkas ini.<br>Gunakan tombol ⬇️ Unduh untuk membukanya.</div>`;
     $('#previewModal').hidden = false;
   }
 
@@ -850,15 +1030,16 @@
     const p = c.plan || {}, d = c.pelaksanaan || {}, s = c.refleksi || {}, pb = c.praktikBaik || {};
     const members = (c.members || []).map(m => `${esc(m.nama)} (${ROLE_LABEL[m.role] || m.role})`).join(', ') || '—';
     const field = (lbl, val, fmt) => `<div class="rep-field"><div class="lbl">${lbl}</div><div class="val${val ? '' : ' empty'}">${val ? (fmt ? fmt(val) : esc(val)) : 'Belum diisi'}</div></div>`;
+    const fieldHtml = (lbl, val) => `<div class="rep-field"><div class="lbl">${lbl}</div><div class="val${val ? '' : ' empty'}">${val ? richDisplay(val) : 'Belum diisi'}</div></div>`;
     const filesList = (list, label) => (list && list.length) ? `<div class="rep-field"><div class="lbl">${label}</div><ul class="rep-list">${list.map(a => `<li>${esc(a.name)}${a.size ? ' (' + fmtSize(a.size) + ')' : ''}</li>`).join('')}</ul></div>` : '';
     const links = (d.videoLinks || []).length ? `<div class="rep-field"><div class="lbl">Tautan video</div><ul class="rep-list">${d.videoLinks.map(v => `<li>${esc(v.title || '')}${v.title ? ': ' : ''}${esc(v.url)}</li>`).join('')}</ul></div>` : '';
     const entriesFor = (phase, cls) => { const es = (c.entries || []).filter(e => e.phase === phase); if (!es.length) return '<div class="val empty">Belum ada catatan.</div>'; return es.map(e => `<div class="rep-entry ${cls}"><div class="eh"><b>${esc(e.userName)}</b> · ${ROLE_LABEL[e.role] || e.role} · ${fmtDateTime(e.createdAt)}${e.fokus ? ' · Fokus: ' + esc(e.fokus) : ''}</div><div class="et">${esc(e.text)}</div></div>`).join(''); };
     const html = `<div class="rep">
       <div class="rep-header"><div class="rep-brand">LeaDi-PDS</div><div class="rep-tag">Lesson Study Digital Platform berbasis Plan · Do · See</div></div>
       <div class="rep-title">${esc(c.title)}</div>
-      <div class="rep-meta">${c.mapel ? `<span><b>Mapel:</b> ${esc(c.mapel)}</span>` : ''}${c.kelas ? `<span><b>Kelas:</b> ${esc(c.kelas)}</span>` : ''}${c.sekolah ? `<span><b>Sekolah:</b> ${esc(c.sekolah)}</span>` : ''}<span><b>Tahap:</b> ${STATUS_LABEL[c.status]}</span></div>
+      <div class="rep-meta">${c.mapel ? `<span><b>Mapel:</b> ${esc(c.mapel)}</span>` : ''}${c.materi ? `<span><b>Materi:</b> ${esc(c.materi)}</span>` : ''}${c.kelas ? `<span><b>Kelas:</b> ${esc(c.kelas)}</span>` : ''}${c.sekolah ? `<span><b>Sekolah:</b> ${esc(c.sekolah)}</span>` : ''}<span><b>Tahap:</b> ${STATUS_LABEL[c.status]}</span></div>
       <div class="rep-members"><b>Guru pemilik:</b> ${esc(c.ownerName)} &nbsp;·&nbsp; <b>Tim:</b> ${members}</div>
-      <div class="rep-section"><h3>📝 Modul Plan — Perencanaan</h3>${field('Tujuan pembelajaran', p.tujuan)}${field('Lesson design / skenario', p.desain)}${field('Rencana open class', (p.tanggalRencana ? fmtDate(p.tanggalRencana) : '') + (p.jamRencana ? ' · ' + p.jamRencana + ' WITA' : ''))}${filesList(p.attachments, 'Perangkat pembelajaran')}<div class="rep-field"><div class="lbl">Diskusi perencanaan</div>${entriesFor('plan', 'plan')}</div></div>
+      <div class="rep-section"><h3>📝 Modul Plan — Perencanaan</h3>${fieldHtml('Capaian pembelajaran', p.desain)}${fieldHtml('Tujuan pembelajaran', p.tujuan)}${field('Rencana open class', (p.tanggalRencana ? fmtDate(p.tanggalRencana) : '') + (p.jamRencana ? ' · ' + p.jamRencana + ' WITA' : ''))}${filesList(p.attachments, 'Perangkat pembelajaran')}<div class="rep-field"><div class="lbl">Diskusi perencanaan</div>${entriesFor('plan', 'plan')}</div></div>
       <div class="rep-section"><h3 class="do">🎥 Modul Do — Pelaksanaan &amp; Observasi</h3>${field('Tanggal &amp; jam pelaksanaan', (d.tanggal ? fmtDate(d.tanggal) : '') + (d.jam ? ' · ' + d.jam + ' WITA' : ''))}${filesList(d.videos, 'Video pembelajaran (berkas)')}${links}${field('Catatan pelaksanaan', d.catatan)}<div class="rep-field"><div class="lbl">Catatan observasi</div>${entriesFor('do', 'do')}</div></div>
       <div class="rep-section"><h3 class="see">🔍 Modul See — Refleksi &amp; Evaluasi</h3>${field('Analisis pembelajaran', s.analisis)}${field('Rekomendasi perbaikan', s.rekomendasi)}<div class="rep-field"><div class="lbl">Refleksi kolaboratif</div>${entriesFor('see', 'see')}</div></div>
       ${pb.published ? `<div class="rep-section"><h3 class="pb">🏆 Praktik Baik</h3>${field('Ringkasan', pb.ringkasan)}${(pb.tags || []).length ? `<div class="rep-field"><div class="lbl">Kata kunci</div><div class="val">${pb.tags.map(t => '#' + esc(t)).join(', ')}</div></div>` : ''}${field('Diterbitkan', pb.publishedAt ? fmtDateTime(pb.publishedAt) : '')}</div>` : ''}
