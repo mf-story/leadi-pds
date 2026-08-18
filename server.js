@@ -153,26 +153,26 @@ function publicUser(u) {
 // Peran & sanitasi
 // ------------------------------------------------------------------
 const ROLES = ['admin', 'dosen', 'guru', 'observer'];
-const ROLE_LABEL = { admin: 'Admin Sistem', dosen: 'Dosen Pendamping', guru: 'Guru SMP', observer: 'Observer' };
+// guru = Guru Model (perencana), observer = Guru Observer (pengamat), dosen = Dosen Pengawas.
+const ROLE_LABEL = { admin: 'Admin Sistem', dosen: 'Dosen Pengawas', guru: 'Guru Model', observer: 'Guru Observer' };
 const PHASES = ['plan', 'do', 'see'];
 const STATUSES = ['plan', 'do', 'see', 'selesai'];
 
 function isAdmin(u) { return u && u.role === 'admin'; }
 function userById(id) { return DB.users.find(u => u.id === id) || null; }
 
-// Dosen & admin melihat semua siklus (pengawasan/fasilitasi); guru & observer
+// Dosen & admin melihat semua siklus (pengawasan); Guru Model & Guru Observer
 // hanya siklus yang mereka miliki atau ikuti.
 function canView(user, c) {
   if (!user || !c) return false;
   if (user.role === 'admin' || user.role === 'dosen') return true;
   return c.ownerId === user.id || (c.memberIds || []).includes(user.id);
 }
-// Yang boleh menyunting rancangan/fase: admin, pemilik (guru), atau dosen anggota.
+// Yang boleh menyunting rancangan/fase: admin atau pemilik (Guru Model).
 function canEdit(user, c) {
   if (!user || !c) return false;
   if (user.role === 'admin') return true;
   if (c.ownerId === user.id) return true;
-  if (user.role === 'dosen' && (c.memberIds || []).includes(user.id)) return true;
   return false;
 }
 // Yang boleh berkontribusi (diskusi/observasi/refleksi): semua yang terlibat.
@@ -180,6 +180,10 @@ function canContribute(user, c) {
   if (!user || !c) return false;
   if (user.role === 'admin' || user.role === 'dosen') return true;
   return c.ownerId === user.id || (c.memberIds || []).includes(user.id);
+}
+// Yang boleh menerbitkan Praktik Baik: Dosen Pengawas atau Admin.
+function canPublish(user) {
+  return user && (user.role === 'admin' || user.role === 'dosen');
 }
 
 function str(v, max) { return String(v == null ? '' : v).slice(0, max || 500).trim(); }
@@ -578,7 +582,7 @@ async function handleApi(req, res, url) {
     if (seg[1] && seg[2] === 'publish' && method === 'POST') {
       const c = DB.cycles.find(x => x.id === seg[1]);
       if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
-      if (!canEdit(me, c)) return sendJSON(res, 403, { error: 'Anda tidak berhak menerbitkan siklus ini' });
+      if (!canPublish(me)) return sendJSON(res, 403, { error: 'Hanya Dosen Pengawas atau Admin yang dapat menerbitkan Praktik Baik' });
       const body = await readBody(req);
       c.praktikBaik = {
         published: true,
@@ -595,7 +599,7 @@ async function handleApi(req, res, url) {
     if (seg[1] && seg[2] === 'unpublish' && method === 'POST') {
       const c = DB.cycles.find(x => x.id === seg[1]);
       if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
-      if (!canEdit(me, c)) return sendJSON(res, 403, { error: 'Anda tidak berhak' });
+      if (!canPublish(me)) return sendJSON(res, 403, { error: 'Anda tidak berhak' });
       c.praktikBaik = { published: false, ringkasan: (c.praktikBaik || {}).ringkasan || '', tags: (c.praktikBaik || {}).tags || [], publishedAt: null };
       c.updatedAt = Date.now();
       saveDB();

@@ -11,7 +11,7 @@
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
 
-  const ROLE_LABEL = { admin: 'Admin Sistem', dosen: 'Dosen Pendamping', guru: 'Guru SMP', observer: 'Observer' };
+  const ROLE_LABEL = { admin: 'Admin Sistem', dosen: 'Dosen Pengawas', guru: 'Guru Model', observer: 'Guru Observer' };
   const STATUS_LABEL = { plan: 'Plan', do: 'Do', see: 'See', selesai: 'Selesai' };
 
   const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard' };
@@ -48,9 +48,10 @@
   function attIcon(a) { if (isImage(a.type)) return '🖼️'; if (isPdf(a.type, a.url)) return '📕'; if (isVideoFile(a.type, a.url)) return '🎬'; if (/word|doc/i.test(a.type)) return '📘'; if (/sheet|excel|xls/i.test(a.type)) return '📗'; if (/presentation|ppt/i.test(a.type)) return '📙'; return '📎'; }
 
   const can = {
-    edit(c) { const u = state.user; if (!u || !c) return false; if (u.role === 'admin') return true; if (c.ownerId === u.id) return true; return u.role === 'dosen' && (c.members || []).some(m => m.id === u.id); },
+    edit(c) { const u = state.user; if (!u || !c) return false; if (u.role === 'admin') return true; return c.ownerId === u.id; },
     contribute(c) { const u = state.user; if (!u || !c) return false; if (u.role === 'admin' || u.role === 'dosen') return true; return c.ownerId === u.id || (c.members || []).some(m => m.id === u.id); },
     delete(c) { const u = state.user; return u && (u.role === 'admin' || c.ownerId === u.id); },
+    publish() { const u = state.user; return u && (u.role === 'admin' || u.role === 'dosen'); },
     createCycle() { return state.user && (state.user.role === 'guru' || state.user.role === 'admin'); }
   };
 
@@ -217,7 +218,7 @@
       ${c.praktikBaik && c.praktikBaik.published ? '<span class="badge-pub">🏆 Praktik Baik</span>' : ''}
       ${editable ? `<button class="btn btn-ghost btn-sm" data-cc="edit">✎ Info</button>` : ''}
       ${editable && c.status !== 'selesai' ? `<button class="btn btn-primary btn-sm" data-cc="advance">${advanceLabel(c.status)}</button>` : ''}
-      ${editable && (c.status === 'see' || c.status === 'selesai') ? `<button class="btn btn-ghost btn-sm" data-cc="publish">🏆 ${c.praktikBaik && c.praktikBaik.published ? 'Perbarui' : 'Terbitkan'}</button>` : ''}
+      ${can.publish() && (c.status === 'see' || c.status === 'selesai') ? `<button class="btn btn-ghost btn-sm" data-cc="publish">🏆 ${c.praktikBaik && c.praktikBaik.published ? 'Perbarui' : 'Terbitkan'}</button>` : ''}
       <button class="btn btn-ghost btn-sm" data-cc="print">🖨️ PDF</button>
       ${can.delete(c) ? `<button class="btn btn-danger btn-sm" data-cc="delete">🗑</button>` : ''}`;
   }

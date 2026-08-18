@@ -28,10 +28,10 @@ const mk = (username, nama, role, jabatan, instansi) => ({
 });
 
 const admin = mk('admin', 'Administrator', 'admin', 'Pengelola Sistem', 'LeaDi-PDS');
-const dosen = mk('dosen', 'Dr. Andi Sukri, M.Pd.', 'dosen', 'Dosen Pendamping', 'Universitas Muhammadiyah Makassar');
-const guru = mk('guru', 'Siti Nurhaliza, S.Pd.', 'guru', 'Guru Matematika', 'SMP Negeri 1 Makassar');
-const observer = mk('observer', 'Ahmad Fauzi, S.Pd.', 'observer', 'Guru IPA', 'SMP Negeri 1 Makassar');
-const guru2 = mk('guru2', 'Rahmawati, S.Pd.', 'guru', 'Guru IPS', 'SMP Negeri 3 Makassar');
+const dosen = mk('dosen', 'Dr. Andi Sukri, M.Pd.', 'dosen', 'Dosen Pengawas', 'Universitas Muhammadiyah Makassar');
+const guru = mk('guru', 'Siti Nurhaliza, S.Pd.', 'guru', 'Guru Model (Matematika)', 'SMP Negeri 1 Makassar');
+const observer = mk('observer', 'Ahmad Fauzi, S.Pd.', 'observer', 'Guru Observer (IPA)', 'SMP Negeri 1 Makassar');
+const guru2 = mk('guru2', 'Rahmawati, S.Pd.', 'guru', 'Guru Model (IPS)', 'SMP Negeri 3 Makassar');
 
 const cycle = {
   id: uid('cyc'),
