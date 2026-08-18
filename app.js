@@ -237,12 +237,6 @@
   async function renderDashboard() {
     $('#welcomeName').textContent = 'Halo, ' + state.user.nama.split(' ')[0] + ' 👋';
     $('#welcomeRole').textContent = ROLE_LABEL[state.user.role] + (state.user.instansi ? ' · ' + state.user.instansi : '');
-    let stats; try { stats = (await api('GET', '/stats')).stats; } catch { stats = { total: 0, byStatus: {}, published: 0 }; }
-    const bs = stats.byStatus || {};
-    $('#statCards').innerHTML = [
-      ['all', '', '🔄', stats.total, 'Total Siklus'], ['plan', 'plan', '📝', bs.plan || 0, 'Tahap Plan'], ['do', 'do', '🎥', bs.do || 0, 'Tahap Do'],
-      ['see', 'see', '🔍', bs.see || 0, 'Tahap See'], ['repo', 'done', '🏆', stats.published || 0, 'Praktik Baik']
-    ].map(([f, cls, ic, n, l]) => `<div class="stat-card ${cls}" data-stat="${f}" title="Lihat ${l}"><div class="stat-ic">${ic}</div><div class="stat-info"><div class="num">${n}</div><div class="lbl">${l}</div></div></div>`).join('');
     renderCycleList();
   }
   function cycleCard(c) {
@@ -265,16 +259,6 @@
     const chip = e.target.closest('.chip'); if (!chip) return;
     $$('#statusChips .chip').forEach(c => c.classList.remove('active')); chip.classList.add('active');
     state.statusFilter = chip.dataset.status; renderCycleList();
-  });
-  // Kartu statistik dapat diklik: filter daftar siklus / buka Repository
-  $('#statCards').addEventListener('click', e => {
-    const card = e.target.closest('[data-stat]'); if (!card) return;
-    const f = card.dataset.stat;
-    if (f === 'repo') { navigate('repo'); return; }
-    state.statusFilter = f;
-    $$('#statusChips .chip').forEach(c => c.classList.toggle('active', c.dataset.status === f));
-    renderCycleList();
-    $('#cycleList').scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
   // buka siklus dari kartu → jadikan aktif → ke Plan (atau fase saat ini)
   document.addEventListener('click', async e => {
