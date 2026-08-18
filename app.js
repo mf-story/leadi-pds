@@ -255,11 +255,6 @@
     $('#cycleList').innerHTML = list.length ? list.map(cycleCard).join('') : emptyState('🔄', 'Belum ada siklus. Klik "+ Siklus Baru".');
   }
   $('#cycleSearch').addEventListener('input', renderCycleList);
-  $('#statusChips').addEventListener('click', e => {
-    const chip = e.target.closest('.chip'); if (!chip) return;
-    $$('#statusChips .chip').forEach(c => c.classList.remove('active')); chip.classList.add('active');
-    state.statusFilter = chip.dataset.status; renderCycleList();
-  });
   // buka siklus dari kartu → jadikan aktif → ke Plan (atau fase saat ini)
   document.addEventListener('click', async e => {
     const open = e.target.closest('[data-open]'); if (!open) return;
