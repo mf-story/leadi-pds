@@ -381,17 +381,19 @@
     const jadwal = d.tanggal ? fmtDate(d.tanggal) + (d.jam ? ' · ' + d.jam + ' WITA' : '') : '';
     return `<div class="panel"><div class="panel-head do"><span class="ph-ic">📋</span> Acuan Pelaksanaan (Do)</div><div class="panel-body ref-body">${refRow('Tanggal & jam', jadwal)}${refRow('Catatan pelaksanaan', d.catatan)}</div></div>`;
   }
-  // Perangkat Observasi — diunggah Guru Model (pemilik), diunduh observer
-  function observasiDocsPanel(c, editable) {
-    const docs = ((c.pelaksanaan || {}).observasiDocs) || [];
+  // Panel perangkat (dokumen) yang diunggah Guru Model (pemilik), diunduh anggota — dipakai Do & See
+  function perangkatDocsPanel(c, editable, field, title, emptyText) {
+    const [grp, key] = field.split('.');
+    const headClass = grp === 'refleksi' ? 'see' : (grp === 'pelaksanaan' ? 'do' : 'plan');
+    const docs = (c[grp] && c[grp][key]) || [];
     const items = docs.length
-      ? `<div class="file-list">${docs.map(a => `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}" data-name="${esc(a.name)}" title="Buka ${esc(a.name)}">${esc(a.name)}</span><span class="sz">${fmtSize(a.size)}</span><a class="file-dl" href="${esc(a.url)}" download="${esc(a.name)}" title="Unduh">⬇️</a>${editable ? `<button type="button" class="x" data-rmodoc="${a.id}">✕</button>` : ''}</div>`).join('')}</div>`
-      : '<div class="file-empty">Belum ada perangkat observasi.</div>';
+      ? `<div class="file-list">${docs.map(a => `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}" data-name="${esc(a.name)}" title="Buka ${esc(a.name)}">${esc(a.name)}</span><span class="sz">${fmtSize(a.size)}</span><a class="file-dl" href="${esc(a.url)}" download="${esc(a.name)}" title="Unduh">⬇️</a>${editable ? `<button type="button" class="x" data-rmodoc="${a.id}" data-odocfield="${field}">✕</button>` : ''}</div>`).join('')}</div>`
+      : `<div class="file-empty">${emptyText || 'Belum ada dokumen.'}</div>`;
     return `<div class="panel">
-      <div class="panel-head do"><span class="ph-ic">📋</span> Perangkat Observasi</div>
+      <div class="panel-head ${headClass}"><span class="ph-ic">📋</span> ${title}</div>
       <div class="panel-body">
         ${items}
-        ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="pelaksanaan.observasiDocs"></label>` : ''}
+        ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="${field}"></label>` : ''}
       </div>
     </div>`;
   }
@@ -505,7 +507,7 @@
         </div>
       </div>
       <div class="phase-side">
-        ${observasiDocsPanel(c, editable)}
+        ${perangkatDocsPanel(c, editable, 'pelaksanaan.observasiDocs', 'Perangkat Observasi', 'Belum ada perangkat observasi.')}
         ${observerDocsPanel(c, 'pelaksanaan.observerDocs')}
         ${planRefPanel(c)}
         ${membersPanel(c)}
@@ -520,18 +522,20 @@
     return `${metaBar(c)}${phaseStepper(c, 'see')}<div class="phase-layout">
       <div class="phase-main">
         <div class="panel">
-          <div class="panel-head see"><span class="ph-ic">🗣️</span> Diskusi Refleksi</div>
-          <div class="panel-body">${threadHtml(c, 'see', can.contribute(c))}</div>
-        </div>
-        <div class="panel">
-          <div class="panel-head see"><span class="ph-ic">🎬</span> Video Refleksi</div>
+          <div class="panel-head see"><span class="ph-ic">🎬</span> Video</div>
           <div class="panel-body">
-            ${videoThumbs(rv, editable, 'refleksi.videos') || '<div class="file-empty">Belum ada video refleksi.</div>'}
+            ${videoThumbs(rv, editable, 'refleksi.videos') || '<div class="file-empty">Belum ada video.</div>'}
             ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="refleksi.videos"></label>` : ''}
           </div>
         </div>
+        <div class="panel">
+          <div class="panel-head see"><span class="ph-ic">🗣️</span> Diskusi Refleksi</div>
+          <div class="panel-body">${threadHtml(c, 'see', can.contribute(c))}</div>
+        </div>
       </div>
       <div class="phase-side">
+        ${perangkatDocsPanel(c, editable, 'refleksi.perangkatDocs', 'Perangkat Refleksi', 'Belum ada perangkat refleksi.')}
+        ${observerDocsPanel(c, 'refleksi.observerDocs')}
         <div class="panel">
           <div class="panel-head see"><span class="ph-ic">📊</span> Analisis & Rekomendasi</div>
           <div class="panel-body">
@@ -544,7 +548,6 @@
           <div class="panel-head see"><span class="ph-ic">🎞️</span> Analisis Video</div>
           <div class="panel-body">${videoThumbs((c.pelaksanaan || {}).videos) || '<div class="file-empty">Belum ada rekaman video.</div>'}${videoLinksHtml((c.pelaksanaan || {}).videoLinks, false)}</div>
         </div>
-        ${observerDocsPanel(c, 'refleksi.observerDocs')}
         ${planRefPanel(c)}
         ${doRefPanel(c)}
         ${membersPanel(c)}
@@ -683,7 +686,7 @@
     if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
     else if (rmVl) { c.pelaksanaan.videoLinks = (c.pelaksanaan.videoLinks || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
     else if (rmVid) { if (confirm('Hapus video ini?')) { const fld = rmVid.dataset.vidfield || 'pelaksanaan.videos'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(v => v.id !== rmVid.dataset.rmvid); await savePhaseData(c, state.view); } }
-    else if (rmOdoc) { c.pelaksanaan.observasiDocs = (c.pelaksanaan.observasiDocs || []).filter(a => a.id !== rmOdoc.dataset.rmodoc); await savePhaseData(c, state.view); }
+    else if (rmOdoc) { const fld = rmOdoc.dataset.odocfield || 'pelaksanaan.observasiDocs'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(a => a.id !== rmOdoc.dataset.rmodoc); await savePhaseData(c, state.view); }
     else if (rmObs) { await deleteObserverDoc(c, rmObs.dataset.rmobs); }
     else if (rment) { await deleteEntry(c, rment.dataset.rment); }
     else if (prev) { openPreview(prev.dataset.preview, prev.dataset.type, prev.dataset.name); }
@@ -706,7 +709,7 @@
       memberIds: (c.members || []).map(m => m.id), status: c.status,
       plan: { tujuan: c.plan.tujuan, desain: c.plan.desain, tanggalRencana: c.plan.tanggalRencana, jamRencana: c.plan.jamRencana, attachments: c.plan.attachments || [] },
       pelaksanaan: { tanggal: c.pelaksanaan.tanggal, jam: c.pelaksanaan.jam, catatan: c.pelaksanaan.catatan, videoLinks: c.pelaksanaan.videoLinks || [], videos: c.pelaksanaan.videos || [], observasiDocs: c.pelaksanaan.observasiDocs || [] },
-      refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi, videos: c.refleksi.videos || [] }
+      refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi, videos: c.refleksi.videos || [], perangkatDocs: c.refleksi.perangkatDocs || [] }
     };
   }
   async function savePhaseData(c, phase) {
