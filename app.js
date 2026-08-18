@@ -505,6 +505,8 @@
           <div class="panel-body">
             ${rv.length ? `<div class="file-list">${rv.map(v => `<div class="file-media"><video controls preload="metadata" src="${esc(v.url)}"></video><div class="file-item"><span class="ic">🎬</span><span class="nm">${esc(v.name)}</span><span class="sz">${fmtSize(v.size)}</span>${editable ? `<button type="button" class="x" data-rmvid="${v.id}" data-vidfield="refleksi.videos">✕</button>` : ''}</div></div>`).join('')}</div>` : '<div class="file-empty">Belum ada video.</div>'}
             ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="refleksi.videos"></label>` : ''}
+            ${textField('Catatan', 'refleksi.catatan', s.catatan, editable, 'Kejadian penting saat refleksi…', true)}
+            ${editable ? saveRow('see') : ''}
           </div>
         </div>
         <div class="panel">
@@ -518,7 +520,6 @@
         <div class="panel">
           <div class="panel-head see"><span class="ph-ic">📊</span> Analisis & Rekomendasi</div>
           <div class="panel-body">
-            ${textField('Catatan', 'refleksi.catatan', s.catatan, editable, 'Kejadian penting saat refleksi…', true)}
             ${textField('Analisis pembelajaran', 'refleksi.analisis', s.analisis, editable, 'Analisis berbasis data: capaian, temuan, keterlibatan siswa…', true)}
             ${textField('Rekomendasi perbaikan', 'refleksi.rekomendasi', s.rekomendasi, editable, 'Rekomendasi untuk siklus / pembelajaran berikutnya…', true)}
             ${editable ? saveRow('see') : ''}
