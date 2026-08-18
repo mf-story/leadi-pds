@@ -403,7 +403,7 @@
           </div>
         </div>
         <div class="panel">
-          <div class="panel-head plan"><span class="ph-ic">💬</span> Komentar</div>
+          <div class="panel-head plan"><span class="ph-ic">💬</span> Diskusi Perencanaan</div>
           <div class="panel-body">${threadHtml(c, 'plan', can.contribute(c))}</div>
         </div>
       </div>
@@ -480,7 +480,7 @@
             ${textField('Catatan pelaksanaan', 'pelaksanaan.catatan', d.catatan, editable, 'Kejadian penting saat open class…', true)}
             ${editable ? saveRow('do') : ''}
             <div class="obs-block">
-              <div class="sub-head"><span class="ph-ic">🔭</span> Catatan Observasi</div>
+              <div class="sub-head"><span class="ph-ic">🔭</span> Diskusi Observasi</div>
               ${threadHtml(c, 'do', can.contribute(c))}
             </div>
           </div>
