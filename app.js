@@ -464,7 +464,7 @@
           <div class="panel-head do"><span class="ph-ic">🎥</span> Pembelajaran${c.mapel ? ' ' + esc(c.mapel) : ''}${d.tanggal ? ' — ' + fmtDate(d.tanggal) : ''}${d.jam ? ' ' + esc(d.jam) : ''}</div>
           <div class="panel-body">
             ${player}
-            ${videoThumbs(d.videos)}
+            ${videoThumbs(d.videos, editable)}
             ${videoLinksHtml(d.videoLinks, editable)}
             ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="pelaksanaan.videos"></label>
               <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-ghost btn-sm" id="addVideoLink">+ Tautan</button></div>` : ''}
@@ -562,9 +562,9 @@
     if (isImage(a.type)) return `<div class="file-media"><img class="file-img" src="${esc(a.url)}" alt="" data-preview="${esc(a.url)}" data-type="${esc(a.type)}">${meta}</div>`;
     return meta;
   }
-  function videoThumbs(list) {
+  function videoThumbs(list, editable) {
     list = list || []; if (!list.length) return '';
-    return `<div class="video-thumbs" style="margin-top:.6rem">${list.map(v => `<div class="video-thumb"><video preload="metadata" src="${esc(v.url)}" data-preview="${esc(v.url)}" data-type="video"></video><div class="vt-cap">${esc(v.name)}</div></div>`).join('')}</div>`;
+    return `<div class="video-thumbs" style="margin-top:.6rem">${list.map(v => `<div class="video-thumb"><video preload="metadata" src="${esc(v.url)}" data-preview="${esc(v.url)}" data-type="video"></video><div class="vt-cap"><span class="vt-name">${esc(v.name)}</span>${editable ? `<button type="button" class="x vt-del" data-rmvid="${v.id}" title="Hapus video">✕</button>` : ''}</div></div>`).join('')}</div>`;
   }
   function videoLinksHtml(list, editable) {
     list = list || []; if (!list.length) return '';
@@ -621,6 +621,7 @@
     const c = state.current; if (!c) return;
     const rmAtt = ev.target.closest('[data-rmatt]');
     const rmVl = ev.target.closest('[data-rmvl]');
+    const rmVid = ev.target.closest('[data-rmvid]');
     const rmObs = ev.target.closest('[data-rmobs]');
     const rmOdoc = ev.target.closest('[data-rmodoc]');
     const rment = ev.target.closest('[data-rment]');
@@ -630,6 +631,7 @@
     const addVl = ev.target.closest('#addVideoLink');
     if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
     else if (rmVl) { c.pelaksanaan.videoLinks = (c.pelaksanaan.videoLinks || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
+    else if (rmVid) { if (confirm('Hapus video ini?')) { c.pelaksanaan.videos = (c.pelaksanaan.videos || []).filter(v => v.id !== rmVid.dataset.rmvid); await savePhaseData(c, state.view); } }
     else if (rmOdoc) { c.pelaksanaan.observasiDocs = (c.pelaksanaan.observasiDocs || []).filter(a => a.id !== rmOdoc.dataset.rmodoc); await savePhaseData(c, state.view); }
     else if (rmObs) { await deleteObserverDoc(c, rmObs.dataset.rmobs); }
     else if (rment) { await deleteEntry(c, rment.dataset.rment); }
