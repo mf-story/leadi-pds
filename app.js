@@ -433,7 +433,7 @@
             ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="plan.attachments"></label>` : ''}
           </div>
         </div>
-        ${observerDocsPanel(c)}
+        ${observerDocsPanel(c, 'plan.observerDocs')}
         ${membersPanel(c)}
       </div>
     </div>`;
@@ -449,22 +449,24 @@
     return `<div class="file-list">${list.map(a => `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}" data-name="${esc(a.name)}" title="Buka ${esc(a.name)}">${esc(a.name)}</span><span class="sz">${fmtSize(a.size)}</span><a class="file-dl" href="${esc(a.url)}" download="${esc(a.name)}" title="Unduh">⬇️</a>${editable ? `<button type="button" class="x" data-rmatt="${a.id}">✕</button>` : ''}</div>`).join('')}</div>`;
   }
 
-  // Panel unggahan observer — dokumen perangkat perencanaan yang telah diunduh & diisi observer
-  function observerDocsPanel(c) {
+  // Panel unggahan observer — dokumen yang diunduh & diisi observer (per tahap)
+  function observerDocsPanel(c, field) {
     const u = state.user;
     const contrib = can.contribute(c);
     // Pemilik (Guru Model) hanya melihat dokumen observer; tombol unggah untuk kontributor selain pemilik
     const canUpload = contrib && u && u.id !== c.ownerId;
-    const list = (c.plan && c.plan.observerDocs) || [];
+    const [grp, key] = field.split('.');
+    const headClass = grp === 'pelaksanaan' ? 'do' : (grp === 'refleksi' ? 'see' : 'plan');
+    const list = (c[grp] && c[grp][key]) || [];
     const items = list.map(a => {
       const canRm = u && (u.role === 'admin' || a.uploaderId === u.id || c.ownerId === u.id);
       return `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}" data-name="${esc(a.name)}" title="Buka ${esc(a.name)}">${esc(a.name)}</span><a class="file-dl" href="${esc(a.url)}" download="${esc(a.name)}" title="Unduh">⬇️</a>${canRm ? `<button type="button" class="x" data-rmobs="${a.id}">✕</button>` : ''}<span class="obs-by">👤 ${esc(a.uploaderName || '')}</span></div>`;
     }).join('');
     return `<div class="panel">
-      <div class="panel-head plan"><span class="ph-ic">📤</span> Unggahan Observer</div>
+      <div class="panel-head ${headClass}"><span class="ph-ic">📤</span> Unggahan Observer</div>
       <div class="panel-body">
         ${list.length ? `<div class="file-list obs-list">${items}</div>` : '<div class="file-empty">Belum ada dokumen dari observer.</div>'}
-        ${canUpload ? `<label class="add-file-btn">➕ Unggah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" id="obsDocInput"></label>` : ''}
+        ${canUpload ? `<label class="add-file-btn">➕ Unggah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="${field}"></label>` : ''}
       </div>
     </div>`;
   }
@@ -504,6 +506,7 @@
       </div>
       <div class="phase-side">
         ${observasiDocsPanel(c, editable)}
+        ${observerDocsPanel(c, 'pelaksanaan.observerDocs')}
         ${planRefPanel(c)}
         ${membersPanel(c)}
       </div>
@@ -533,6 +536,7 @@
           <div class="panel-head see"><span class="ph-ic">🎞️</span> Analisis Video</div>
           <div class="panel-body">${videoThumbs((c.pelaksanaan || {}).videos) || '<div class="file-empty">Belum ada rekaman video.</div>'}${videoLinksHtml((c.pelaksanaan || {}).videoLinks, false)}</div>
         </div>
+        ${observerDocsPanel(c, 'refleksi.observerDocs')}
         ${planRefPanel(c)}
         ${doRefPanel(c)}
         ${membersPanel(c)}
@@ -653,13 +657,6 @@
         } catch (ex) { hideUploadProgress(); toast(ex.message, 'err'); }
       });
     });
-    const obsInp = $('#obsDocInput', body);
-    if (obsInp) {
-      obsInp.addEventListener('change', async () => {
-        const files = Array.from(obsInp.files); obsInp.value = '';
-        if (files.length) await uploadObserverDocs(c, files);
-      });
-    }
   }
   // Handler klik panel fase — dipasang SEKALI per body (bukan tiap render) agar tidak menumpuk
   async function onPhaseBodyClick(ev) {
@@ -749,20 +746,6 @@
     if (!confirm('Hapus catatan ini?')) return;
     try { await api('DELETE', '/cycles/' + c.id + '/entries/' + eid); const d = await api('GET', '/cycles/' + c.id); state.current = d.cycle; await renderPhaseView(state.view); }
     catch (ex) { toast(ex.message, 'err'); }
-  }
-  async function uploadObserverDocs(c, files) {
-    files = Array.from(files);
-    try {
-      showUploadProgress('Mengunggah… 0%');
-      let done = 0;
-      for (const f of files) {
-        if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
-        const d = await apiUploadBinary(c.id, 'plan.observerDocs', f, setUploadProgress);
-        state.current = d.cycle; done++;
-      }
-      if (done) { hideUploadProgress('✅ Dokumen berhasil diunggah'); await loadCycles(); await renderPhaseView(state.view); }
-      else hideUploadProgress();
-    } catch (ex) { hideUploadProgress(); toast(ex.message, 'err'); }
   }
   async function deleteObserverDoc(c, id) {
     if (!confirm('Hapus dokumen ini?')) return;

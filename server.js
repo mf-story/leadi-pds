@@ -222,11 +222,13 @@ function cleanCycle(body, existing) {
           })).filter(v => v.url)
         : (existing && existing.pelaksanaan ? (existing.pelaksanaan.videoLinks || []) : []),
       videos: existing && existing.pelaksanaan ? (existing.pelaksanaan.videos || []) : [],
-      observasiDocs: existing && existing.pelaksanaan ? (existing.pelaksanaan.observasiDocs || []) : []
+      observasiDocs: existing && existing.pelaksanaan ? (existing.pelaksanaan.observasiDocs || []) : [],
+      observerDocs: existing && existing.pelaksanaan ? (existing.pelaksanaan.observerDocs || []) : []
     },
     refleksi: {
       analisis: str((body.refleksi || {}).analisis, 8000),
-      rekomendasi: str((body.refleksi || {}).rekomendasi, 8000)
+      rekomendasi: str((body.refleksi || {}).rekomendasi, 8000),
+      observerDocs: existing && existing.refleksi ? (existing.refleksi.observerDocs || []) : []
     },
     praktikBaik: existing && existing.praktikBaik ? existing.praktikBaik : {
       published: false, ringkasan: '', tags: [], publishedAt: null
@@ -296,7 +298,7 @@ function processAttachments(list, oldList) {
   return result;
 }
 function deleteCycleFiles(c) {
-  const all = [...((c.plan && c.plan.attachments) || []), ...((c.plan && c.plan.observerDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.videos) || []), ...((c.pelaksanaan && c.pelaksanaan.observasiDocs) || [])];
+  const all = [...((c.plan && c.plan.attachments) || []), ...((c.plan && c.plan.observerDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.videos) || []), ...((c.pelaksanaan && c.pelaksanaan.observasiDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.observerDocs) || []), ...((c.refleksi && c.refleksi.observerDocs) || [])];
   for (const a of all) {
     if (a.url) { try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(a.url))); } catch {} }
   }
@@ -611,9 +613,9 @@ async function handleApi(req, res, url) {
       const c = DB.cycles.find(x => x.id === seg[1]);
       if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
       const field = String(url.searchParams.get('field') || '');
-      const allowed = ['plan.attachments', 'pelaksanaan.videos', 'pelaksanaan.observasiDocs', 'plan.observerDocs'];
+      const allowed = ['plan.attachments', 'pelaksanaan.videos', 'pelaksanaan.observasiDocs', 'plan.observerDocs', 'pelaksanaan.observerDocs', 'refleksi.observerDocs'];
       if (!allowed.includes(field)) return sendJSON(res, 400, { error: 'Field tidak valid' });
-      const isObserverDocs = field === 'plan.observerDocs';
+      const isObserverDocs = field.endsWith('.observerDocs');
       if (isObserverDocs ? !canContribute(me, c) : !canEdit(me, c)) return sendJSON(res, 403, { error: 'Anda tidak berhak mengunggah pada siklus ini' });
       let origName = 'berkas';
       try { origName = decodeURIComponent(url.searchParams.get('name') || 'berkas'); } catch {}
@@ -654,16 +656,20 @@ async function handleApi(req, res, url) {
       saveDB();
       return sendJSON(res, 200, { cycle: enrichCycle(c) });
     }
-    // hapus dokumen observer
+    // hapus dokumen observer (cari di semua tahap: plan/pelaksanaan/refleksi)
     if (seg[1] && seg[2] === 'observer-docs' && seg[3] && method === 'DELETE') {
       const c = DB.cycles.find(x => x.id === seg[1]);
       if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
-      const docs = (c.plan && c.plan.observerDocs) || [];
-      const doc = docs.find(d => d.id === seg[3]);
+      const groups = ['plan', 'pelaksanaan', 'refleksi'];
+      let doc = null, grp = null;
+      for (const g of groups) {
+        const found = ((c[g] && c[g].observerDocs) || []).find(d => d.id === seg[3]);
+        if (found) { doc = found; grp = g; break; }
+      }
       if (!doc) return sendJSON(res, 404, { error: 'Dokumen tidak ditemukan' });
       if (!(isAdmin(me) || doc.uploaderId === me.id || c.ownerId === me.id)) return sendJSON(res, 403, { error: 'Hanya pengunggah, pemilik, atau admin yang dapat menghapus dokumen' });
       if (doc.url) { try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(doc.url))); } catch {} }
-      c.plan.observerDocs = docs.filter(d => d.id !== seg[3]);
+      c[grp].observerDocs = c[grp].observerDocs.filter(d => d.id !== seg[3]);
       c.updatedAt = Date.now();
       saveDB();
       return sendJSON(res, 200, { cycle: enrichCycle(c) });
