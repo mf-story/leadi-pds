@@ -395,7 +395,7 @@
       </div>
       <div class="phase-side">
         <div class="panel">
-          <div class="panel-head plan"><span class="ph-ic">📎</span> Perangkat Pembelajaran</div>
+          <div class="panel-head plan"><span class="ph-ic">📎</span> Perangkat Perencanaan</div>
           <div class="panel-body">
             ${docsHtml(docs, editable)}
             ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="plan.attachments"></label>` : ''}
