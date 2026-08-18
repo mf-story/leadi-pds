@@ -554,8 +554,35 @@
     state.selectedMembers = editing ? (c.members || []).map(m => ({ id: m.id, nama: m.nama, role: m.role })) : [];
     $('#cycleForm').dataset.editId = editing ? c.id : '';
     $('#memberSearch').value = ''; $('#memberOptions').hidden = true; renderMemberChips();
+    // Kolom catatan & unggahan hanya utk siklus BARU (saat ubah info, isi diedit di tab Plan/Do)
+    $('#cycleCreateExtras').hidden = editing;
+    $('#cCatatan').value = ''; cycleDocs = []; cycleVids = [];
+    $('#cDocInput').value = ''; $('#cVidInput').value = ''; renderCreateFiles();
     $('#cycleError').hidden = true; $('#cycleModal').hidden = false;
   }
+  // Berkas terpilih saat membuat siklus baru (disimpan base64 lalu dikirim ke server)
+  let cycleDocs = [], cycleVids = [];
+  function renderCreateFiles() {
+    const chip = (f, i, kind) => `<div class="file-item"><span class="ic">${attIcon({ type: f.type, url: f.name })}</span><span class="nm">${esc(f.name)}</span><span class="sz">${fmtSize(f.size)}</span><button type="button" class="x" data-rmcfile="${kind}:${i}">✕</button></div>`;
+    $('#cDocList').innerHTML = cycleDocs.map((f, i) => chip(f, i, 'doc')).join('');
+    $('#cVidList').innerHTML = cycleVids.map((f, i) => chip(f, i, 'vid')).join('');
+  }
+  async function addCreateFiles(files, arr) {
+    for (const f of files) {
+      if (f.size > 80 * 1024 * 1024) { toast('“' + f.name + '” melebihi 80 MB', 'err'); continue; }
+      const data = await fileToDataUrl(f);
+      arr.push({ name: f.name, type: f.type, size: f.size, data });
+    }
+    renderCreateFiles();
+  }
+  $('#cDocInput').addEventListener('change', async e => { await addCreateFiles(e.target.files, cycleDocs); e.target.value = ''; });
+  $('#cVidInput').addEventListener('change', async e => { await addCreateFiles(e.target.files, cycleVids); e.target.value = ''; });
+  $('#cycleCreateExtras').addEventListener('click', e => {
+    const b = e.target.closest('[data-rmcfile]'); if (!b) return;
+    const [kind, i] = b.dataset.rmcfile.split(':');
+    (kind === 'doc' ? cycleDocs : cycleVids).splice(Number(i), 1);
+    renderCreateFiles();
+  });
   $('#newCycleBtn').addEventListener('click', () => openCycleForm(null));
   function renderMemberChips() { $('#memberChips').innerHTML = state.selectedMembers.map(m => `<span class="sel-chip"><span class="dot ${m.role}"></span>${esc(m.nama)}<button type="button" class="cx" data-rmmember="${m.id}">✕</button></span>`).join(''); }
   $('#memberChips').addEventListener('click', e => { const b = e.target.closest('[data-rmmember]'); if (!b) return; state.selectedMembers = state.selectedMembers.filter(m => m.id !== b.dataset.rmmember); renderMemberChips(); });
@@ -585,6 +612,9 @@
         if (PHASE_VIEWS[state.view]) await renderPhaseView(state.view); else renderDashboard();
         toast('Tersimpan', 'ok');
       } else {
+        // Siklus baru: sertakan catatan (plan) + unggahan dokumen/gambar & video
+        payload.plan = { desain: $('#cCatatan').value, attachments: cycleDocs };
+        payload.pelaksanaan = { videos: cycleVids };
         const d = await api('POST', '/cycles', payload); await loadCycles();
         $('#cycleModal').hidden = true;
         state.activeId = d.cycle.id; state.current = null; localStorage.setItem(ACTIVE_KEY, state.activeId);

@@ -197,6 +197,11 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .file-item .x { background: none; border: none; color: var(--danger); cursor: pointer; font-size: 1rem; }
 .file-empty { color: var(--muted); font-style: italic; font-size: .86rem; padding: .3rem 0; }
 .add-file-btn { display: inline-flex; align-items: center; gap: .3rem; background: var(--blue-soft); color: var(--blue-dark); border: 1.5px dashed var(--accent); border-radius: 9px; padding: .5rem .8rem; font-size: .84rem; font-weight: 600; cursor: pointer; margin-top: .5rem; }
+#cycleCreateExtras { display: flex; flex-direction: column; gap: .8rem; }
+.upload-group { display: flex; flex-direction: column; gap: .3rem; }
+.upload-group > label:first-child { font-weight: 600; font-size: .84rem; }
+.upload-group .photo-btn { align-self: flex-start; margin-top: .2rem; }
+.upload-group .file-list:empty { display: none; }
 
 /* video */
 .video-block video { width: 100%; border-radius: 10px; background: #000; max-height: 360px; }

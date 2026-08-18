@@ -171,6 +171,21 @@
           <div id="memberOptions" class="picker-options" hidden></div>
           <div id="memberChips" class="chips-wrap"></div>
         </div>
+        <div id="cycleCreateExtras">
+          <label>Catatan / rencana awal
+            <textarea id="cCatatan" rows="3" placeholder="Tujuan, ringkasan rencana, atau catatan awal…"></textarea>
+          </label>
+          <div class="upload-group">
+            <label>Dokumen & gambar (perangkat pembelajaran)</label>
+            <div class="file-list" id="cDocList"></div>
+            <label class="photo-btn">📎 Tambah dokumen/gambar<input type="file" id="cDocInput" accept="image/*,application/pdf,.doc,.docx,.ppt,.pptx,.xls,.xlsx" multiple hidden /></label>
+          </div>
+          <div class="upload-group">
+            <label>Video pembelajaran</label>
+            <div class="file-list" id="cVidList"></div>
+            <label class="photo-btn">🎬 Tambah video<input type="file" id="cVidInput" accept="video/*" multiple hidden /></label>
+          </div>
+        </div>
         <p id="cycleError" class="form-error" hidden></p>
         <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="cycleModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
       </form>
