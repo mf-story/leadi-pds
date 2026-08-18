@@ -229,6 +229,13 @@ function cleanCycle(body, existing) {
       analisis: str((body.refleksi || {}).analisis, 8000),
       rekomendasi: str((body.refleksi || {}).rekomendasi, 8000),
       catatan: str((body.refleksi || {}).catatan, 8000),
+      videoLinks: Array.isArray((body.refleksi || {}).videoLinks)
+        ? body.refleksi.videoLinks.slice(0, 20).map(v => ({
+            id: v && v.id ? String(v.id).slice(0, 60) : uid('vl'),
+            title: str(v && v.title, 160),
+            url: str(v && v.url, 600)
+          })).filter(v => v.url)
+        : (existing && existing.refleksi ? (existing.refleksi.videoLinks || []) : []),
       videos: existing && existing.refleksi ? (existing.refleksi.videos || []) : [],
       perangkatDocs: existing && existing.refleksi ? (existing.refleksi.perangkatDocs || []) : [],
       observerDocs: existing && existing.refleksi ? (existing.refleksi.observerDocs || []) : []

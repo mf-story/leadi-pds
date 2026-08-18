@@ -498,13 +498,18 @@
   function seeView(c, editable) {
     const s = c.refleksi || {};
     const rv = s.videos || [];
+    const rvl = s.videoLinks || [];
+    const rEmbed = rvl.map(v => ytEmbed(v.url)).find(Boolean);
     return `${metaBar(c)}${phaseStepper(c, 'see')}<div class="phase-layout">
       <div class="phase-main">
         <div class="panel">
           <div class="panel-head see"><span class="ph-ic">🎬</span> Video</div>
           <div class="panel-body">
             ${rv.length ? `<div class="file-list">${rv.map(v => `<div class="file-media"><video controls preload="metadata" src="${esc(v.url)}"></video><div class="file-item"><span class="ic">🎬</span><span class="nm">${esc(v.name)}</span><span class="sz">${fmtSize(v.size)}</span>${editable ? `<button type="button" class="x" data-rmvid="${v.id}" data-vidfield="refleksi.videos">✕</button>` : ''}</div></div>`).join('')}</div>` : '<div class="file-empty">Belum ada video.</div>'}
-            ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="refleksi.videos"></label>` : ''}
+            ${rEmbed ? `<div class="video-embed"><iframe src="${rEmbed}" allowfullscreen loading="lazy"></iframe></div>` : ''}
+            ${videoLinksHtml(rvl, editable, 'refleksi.videoLinks')}
+            ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="refleksi.videos"></label>
+              <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-ghost btn-sm" id="addVideoLink" data-vlfield="refleksi.videoLinks">+ Tautan</button></div>` : ''}
             ${textField('Catatan', 'refleksi.catatan', s.catatan, editable, 'Kejadian penting saat refleksi…', true)}
             ${editable ? saveRow('see') : ''}
           </div>
@@ -587,9 +592,10 @@
     const fld = field || 'pelaksanaan.videos';
     return `<div class="video-thumbs" style="margin-top:.6rem">${list.map(v => `<div class="video-thumb"><video preload="metadata" src="${esc(v.url)}" data-preview="${esc(v.url)}" data-type="video"></video><div class="vt-cap"><span class="vt-name">${esc(v.name)}</span>${editable ? `<button type="button" class="x vt-del" data-rmvid="${v.id}" data-vidfield="${fld}" title="Hapus video">✕</button>` : ''}</div></div>`).join('')}</div>`;
   }
-  function videoLinksHtml(list, editable) {
+  function videoLinksHtml(list, editable, field) {
     list = list || []; if (!list.length) return '';
-    return `<div class="video-links">${list.map(v => `<div class="video-link-item"><span>🔗</span><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || v.url)}</a>${editable ? `<button type="button" class="x" data-rmvl="${v.id}">✕</button>` : ''}</div>`).join('')}</div>`;
+    const fld = field || 'pelaksanaan.videoLinks';
+    return `<div class="video-links">${list.map(v => `<div class="video-link-item"><span>🔗</span><a href="${esc(v.url)}" target="_blank" rel="noopener">${esc(v.title || v.url)}</a>${editable ? `<button type="button" class="x" data-rmvl="${v.id}" data-vlfield="${fld}">✕</button>` : ''}</div>`).join('')}</div>`;
   }
   function ytEmbed(url) { const m = /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([\w-]{11})/.exec(url || ''); return m ? 'https://www.youtube.com/embed/' + m[1] : ''; }
 
@@ -665,7 +671,7 @@
     const sendEntry = ev.target.closest('[data-sendentry]');
     const addVl = ev.target.closest('#addVideoLink');
     if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
-    else if (rmVl) { c.pelaksanaan.videoLinks = (c.pelaksanaan.videoLinks || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
+    else if (rmVl) { const fld = rmVl.dataset.vlfield || 'pelaksanaan.videoLinks'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
     else if (rmVid) { if (confirm('Hapus video ini?')) { const fld = rmVid.dataset.vidfield || 'pelaksanaan.videos'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(v => v.id !== rmVid.dataset.rmvid); await savePhaseData(c, state.view); } }
     else if (rmOdoc) { const fld = rmOdoc.dataset.odocfield || 'pelaksanaan.observasiDocs'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(a => a.id !== rmOdoc.dataset.rmodoc); await savePhaseData(c, state.view); }
     else if (rmObs) { await deleteObserverDoc(c, rmObs.dataset.rmobs); }
@@ -673,7 +679,7 @@
     else if (prev) { openPreview(prev.dataset.preview, prev.dataset.type, prev.dataset.name); }
     else if (savePhase) { await savePhaseData(c, savePhase.dataset.savephase); }
     else if (sendEntry) { await sendEntry_(c, sendEntry.dataset.sendentry); }
-    else if (addVl) { addVideoLink(c); }
+    else if (addVl) { addVideoLink(c, addVl.dataset.vlfield); }
   }
   ['plan', 'do', 'see'].forEach(v => { const el = document.getElementById(v + 'Body'); if (el) el.addEventListener('click', onPhaseBodyClick); });
   function collectFields(c) {
@@ -690,7 +696,7 @@
       memberIds: (c.members || []).map(m => m.id), status: c.status,
       plan: { tujuan: c.plan.tujuan, desain: c.plan.desain, tanggalRencana: c.plan.tanggalRencana, jamRencana: c.plan.jamRencana, attachments: c.plan.attachments || [] },
       pelaksanaan: { tanggal: c.pelaksanaan.tanggal, jam: c.pelaksanaan.jam, catatan: c.pelaksanaan.catatan, videoLinks: c.pelaksanaan.videoLinks || [], videos: c.pelaksanaan.videos || [], observasiDocs: c.pelaksanaan.observasiDocs || [] },
-      refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi, catatan: c.refleksi.catatan, videos: c.refleksi.videos || [], perangkatDocs: c.refleksi.perangkatDocs || [] }
+      refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi, catatan: c.refleksi.catatan, videoLinks: c.refleksi.videoLinks || [], videos: c.refleksi.videos || [], perangkatDocs: c.refleksi.perangkatDocs || [] }
     };
   }
   async function savePhaseData(c, phase) {
@@ -716,13 +722,15 @@
       if (!hasNew) toast('Perubahan tersimpan', 'ok');
     } catch (ex) { hideUploadProgress(); toast(ex.message, 'err'); }
   }
-  function addVideoLink(c) {
+  function addVideoLink(c, field) {
+    field = field || 'pelaksanaan.videoLinks';
     const title = ($('#vlTitle') || {}).value ? $('#vlTitle').value.trim() : '';
     const url = ($('#vlUrl') || {}).value ? $('#vlUrl').value.trim() : '';
     if (!url) { toast('Isi URL video', 'err'); return; }
-    collectFields(c); c.pelaksanaan.videoLinks = c.pelaksanaan.videoLinks || [];
-    c.pelaksanaan.videoLinks.push({ id: 'vl_' + Date.now(), title, url });
-    savePhaseData(c, 'do');
+    const [g, k] = field.split('.');
+    collectFields(c); if (!c[g]) c[g] = {}; c[g][k] = c[g][k] || [];
+    c[g][k].push({ id: 'vl_' + Date.now(), title, url });
+    savePhaseData(c, state.view);
   }
   async function sendEntry_(c, phase) {
     const form = $(`[data-entryform="${phase}"]`);
