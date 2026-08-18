@@ -435,6 +435,8 @@
   function observerDocsPanel(c) {
     const u = state.user;
     const contrib = can.contribute(c);
+    // Pemilik (Guru Model) hanya melihat dokumen observer; tombol unggah untuk kontributor selain pemilik
+    const canUpload = contrib && u && u.id !== c.ownerId;
     const list = (c.plan && c.plan.observerDocs) || [];
     const items = list.map(a => {
       const canRm = u && (u.role === 'admin' || a.uploaderId === u.id || c.ownerId === u.id);
@@ -444,7 +446,7 @@
       <div class="panel-head plan"><span class="ph-ic">📤</span> Unggahan Observer</div>
       <div class="panel-body">
         ${list.length ? `<div class="file-list obs-list">${items}</div>` : '<div class="file-empty">Belum ada dokumen dari observer.</div>'}
-        ${contrib ? `<label class="add-file-btn">➕ Unggah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" id="obsDocInput"></label>` : ''}
+        ${canUpload ? `<label class="add-file-btn">➕ Unggah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" id="obsDocInput"></label>` : ''}
       </div>
     </div>`;
   }
