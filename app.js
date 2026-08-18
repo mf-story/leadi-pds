@@ -1013,16 +1013,37 @@
 
   // ---------------- Preview ----------------
   function isOffice(t, url) { return /\.(docx?|xlsx?|pptx?)$/i.test(url || '') || /officedocument|msword|ms-excel|ms-powerpoint/i.test(t || ''); }
-  function openPreview(url, type, name) {
+  async function openPreview(url, type, name) {
     const body = $('#previewBody');
     const dl = $('#previewDownload'); dl.href = url; dl.setAttribute('download', name || '');
     $('#previewName').textContent = name || '';
-    if (isImage(type)) body.innerHTML = `<img src="${esc(url)}" alt="">`;
-    else if (isPdf(type, url)) body.innerHTML = `<iframe src="${esc(url)}"></iframe>`;
-    else if (isVideoFile(type, url)) body.innerHTML = `<video src="${esc(url)}" controls autoplay></video>`;
-    else if (isOffice(type, url)) body.innerHTML = `<iframe src="https://view.officeapps.live.com/op/embed.aspx?src=${encodeURIComponent(location.origin + url)}"></iframe><div class="preview-note">Jika dokumen tidak tampil (mis. saat diakses lewat localhost), silakan gunakan tombol ⬇️ Unduh.</div>`;
-    else body.innerHTML = `<div class="preview-fallback">Pratinjau tidak tersedia untuk jenis berkas ini.<br>Gunakan tombol ⬇️ Unduh untuk membukanya.</div>`;
     $('#previewModal').hidden = false;
+    const ext = ((name || url).split('.').pop() || '').toLowerCase();
+    if (isImage(type)) { body.innerHTML = `<img src="${esc(url)}" alt="">`; return; }
+    if (isPdf(type, url)) { body.innerHTML = `<iframe src="${esc(url)}"></iframe>`; return; }
+    if (isVideoFile(type, url)) { body.innerHTML = `<video src="${esc(url)}" controls autoplay></video>`; return; }
+    // Word & Excel dirender di browser (satu origin) → jalan di HTTP maupun HTTPS
+    if (ext === 'docx' || ext === 'doc' || /wordprocessingml|msword/i.test(type || '')) return renderDocx(url, body);
+    if (ext === 'xlsx' || ext === 'xls' || /spreadsheetml|ms-excel/i.test(type || '')) return renderXlsx(url, body);
+    body.innerHTML = `<div class="preview-fallback">Pratinjau untuk berkas ${ext ? esc(ext.toUpperCase()) : 'ini'} belum didukung.<br>Gunakan tombol ⬇️ Unduh untuk membukanya.</div>`;
+  }
+  async function renderDocx(url, body) {
+    body.innerHTML = `<div class="preview-fallback">⏳ Memuat dokumen…</div>`;
+    try {
+      const buf = await (await fetch(url)).arrayBuffer();
+      const res = await window.mammoth.convertToHtml({ arrayBuffer: buf });
+      body.innerHTML = `<div class="doc-view">${res.value || '<p><i>(dokumen kosong)</i></p>'}</div>`;
+    } catch (e) { body.innerHTML = `<div class="preview-fallback">Gagal menampilkan dokumen.<br>Gunakan tombol ⬇️ Unduh.</div>`; }
+  }
+  async function renderXlsx(url, body) {
+    body.innerHTML = `<div class="preview-fallback">⏳ Memuat spreadsheet…</div>`;
+    try {
+      const buf = await (await fetch(url)).arrayBuffer();
+      const wb = window.XLSX.read(buf, { type: 'array' });
+      let html = '';
+      wb.SheetNames.forEach(n => { html += `<h4 class="doc-sheet">${esc(n)}</h4>` + window.XLSX.utils.sheet_to_html(wb.Sheets[n]); });
+      body.innerHTML = `<div class="doc-view doc-xlsx">${html || '<p><i>(spreadsheet kosong)</i></p>'}</div>`;
+    } catch (e) { body.innerHTML = `<div class="preview-fallback">Gagal menampilkan spreadsheet.<br>Gunakan tombol ⬇️ Unduh.</div>`; }
   }
 
   // ---------------- Laporan cetak / PDF ----------------
