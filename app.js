@@ -516,11 +516,19 @@
   // SEE
   function seeView(c, editable) {
     const s = c.refleksi || {};
+    const rv = s.videos || [];
     return `${metaBar(c)}${phaseStepper(c, 'see')}<div class="phase-layout">
       <div class="phase-main">
         <div class="panel">
           <div class="panel-head see"><span class="ph-ic">🗣️</span> Diskusi Refleksi</div>
           <div class="panel-body">${threadHtml(c, 'see', can.contribute(c))}</div>
+        </div>
+        <div class="panel">
+          <div class="panel-head see"><span class="ph-ic">🎬</span> Video Refleksi</div>
+          <div class="panel-body">
+            ${videoThumbs(rv, editable, 'refleksi.videos') || '<div class="file-empty">Belum ada video refleksi.</div>'}
+            ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="refleksi.videos"></label>` : ''}
+          </div>
         </div>
       </div>
       <div class="phase-side">
@@ -590,9 +598,10 @@
     if (isImage(a.type)) return `<div class="file-media"><img class="file-img" src="${esc(a.url)}" alt="" data-preview="${esc(a.url)}" data-type="${esc(a.type)}">${meta}</div>`;
     return meta;
   }
-  function videoThumbs(list, editable) {
+  function videoThumbs(list, editable, field) {
     list = list || []; if (!list.length) return '';
-    return `<div class="video-thumbs" style="margin-top:.6rem">${list.map(v => `<div class="video-thumb"><video preload="metadata" src="${esc(v.url)}" data-preview="${esc(v.url)}" data-type="video"></video><div class="vt-cap"><span class="vt-name">${esc(v.name)}</span>${editable ? `<button type="button" class="x vt-del" data-rmvid="${v.id}" title="Hapus video">✕</button>` : ''}</div></div>`).join('')}</div>`;
+    const fld = field || 'pelaksanaan.videos';
+    return `<div class="video-thumbs" style="margin-top:.6rem">${list.map(v => `<div class="video-thumb"><video preload="metadata" src="${esc(v.url)}" data-preview="${esc(v.url)}" data-type="video"></video><div class="vt-cap"><span class="vt-name">${esc(v.name)}</span>${editable ? `<button type="button" class="x vt-del" data-rmvid="${v.id}" data-vidfield="${fld}" title="Hapus video">✕</button>` : ''}</div></div>`).join('')}</div>`;
   }
   function videoLinksHtml(list, editable) {
     list = list || []; if (!list.length) return '';
@@ -673,7 +682,7 @@
     const addVl = ev.target.closest('#addVideoLink');
     if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
     else if (rmVl) { c.pelaksanaan.videoLinks = (c.pelaksanaan.videoLinks || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
-    else if (rmVid) { if (confirm('Hapus video ini?')) { c.pelaksanaan.videos = (c.pelaksanaan.videos || []).filter(v => v.id !== rmVid.dataset.rmvid); await savePhaseData(c, state.view); } }
+    else if (rmVid) { if (confirm('Hapus video ini?')) { const fld = rmVid.dataset.vidfield || 'pelaksanaan.videos'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(v => v.id !== rmVid.dataset.rmvid); await savePhaseData(c, state.view); } }
     else if (rmOdoc) { c.pelaksanaan.observasiDocs = (c.pelaksanaan.observasiDocs || []).filter(a => a.id !== rmOdoc.dataset.rmodoc); await savePhaseData(c, state.view); }
     else if (rmObs) { await deleteObserverDoc(c, rmObs.dataset.rmobs); }
     else if (rment) { await deleteEntry(c, rment.dataset.rment); }
@@ -697,7 +706,7 @@
       memberIds: (c.members || []).map(m => m.id), status: c.status,
       plan: { tujuan: c.plan.tujuan, desain: c.plan.desain, tanggalRencana: c.plan.tanggalRencana, jamRencana: c.plan.jamRencana, attachments: c.plan.attachments || [] },
       pelaksanaan: { tanggal: c.pelaksanaan.tanggal, jam: c.pelaksanaan.jam, catatan: c.pelaksanaan.catatan, videoLinks: c.pelaksanaan.videoLinks || [], videos: c.pelaksanaan.videos || [], observasiDocs: c.pelaksanaan.observasiDocs || [] },
-      refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi }
+      refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi, videos: c.refleksi.videos || [] }
     };
   }
   async function savePhaseData(c, phase) {

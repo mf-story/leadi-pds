@@ -228,6 +228,7 @@ function cleanCycle(body, existing) {
     refleksi: {
       analisis: str((body.refleksi || {}).analisis, 8000),
       rekomendasi: str((body.refleksi || {}).rekomendasi, 8000),
+      videos: existing && existing.refleksi ? (existing.refleksi.videos || []) : [],
       observerDocs: existing && existing.refleksi ? (existing.refleksi.observerDocs || []) : []
     },
     praktikBaik: existing && existing.praktikBaik ? existing.praktikBaik : {
@@ -298,7 +299,7 @@ function processAttachments(list, oldList) {
   return result;
 }
 function deleteCycleFiles(c) {
-  const all = [...((c.plan && c.plan.attachments) || []), ...((c.plan && c.plan.observerDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.videos) || []), ...((c.pelaksanaan && c.pelaksanaan.observasiDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.observerDocs) || []), ...((c.refleksi && c.refleksi.observerDocs) || [])];
+  const all = [...((c.plan && c.plan.attachments) || []), ...((c.plan && c.plan.observerDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.videos) || []), ...((c.pelaksanaan && c.pelaksanaan.observasiDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.observerDocs) || []), ...((c.refleksi && c.refleksi.videos) || []), ...((c.refleksi && c.refleksi.observerDocs) || [])];
   for (const a of all) {
     if (a.url) { try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(a.url))); } catch {} }
   }
@@ -543,10 +544,12 @@ async function handleApi(req, res, url) {
       const oldPlan = (existing.plan && existing.plan.attachments) || [];
       const oldVideos = (existing.pelaksanaan && existing.pelaksanaan.videos) || [];
       const oldObsvDocs = (existing.pelaksanaan && existing.pelaksanaan.observasiDocs) || [];
+      const oldReflVideos = (existing.refleksi && existing.refleksi.videos) || [];
       Object.assign(existing, c);
       existing.plan.attachments = processAttachments((body.plan || {}).attachments, oldPlan);
       existing.pelaksanaan.videos = processAttachments((body.pelaksanaan || {}).videos, oldVideos);
       existing.pelaksanaan.observasiDocs = processAttachments((body.pelaksanaan || {}).observasiDocs, oldObsvDocs);
+      existing.refleksi.videos = processAttachments((body.refleksi || {}).videos, oldReflVideos);
       const added = (existing.memberIds || []).filter(id => !prevMembers.includes(id));
       if (added.length) notify(added, me, existing, `Anda ditambahkan pada siklus "${existing.title}".`);
       saveDB();
@@ -613,7 +616,7 @@ async function handleApi(req, res, url) {
       const c = DB.cycles.find(x => x.id === seg[1]);
       if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
       const field = String(url.searchParams.get('field') || '');
-      const allowed = ['plan.attachments', 'pelaksanaan.videos', 'pelaksanaan.observasiDocs', 'plan.observerDocs', 'pelaksanaan.observerDocs', 'refleksi.observerDocs'];
+      const allowed = ['plan.attachments', 'pelaksanaan.videos', 'pelaksanaan.observasiDocs', 'refleksi.videos', 'plan.observerDocs', 'pelaksanaan.observerDocs', 'refleksi.observerDocs'];
       if (!allowed.includes(field)) return sendJSON(res, 400, { error: 'Field tidak valid' });
       const isObserverDocs = field.endsWith('.observerDocs');
       if (isObserverDocs ? !canContribute(me, c) : !canEdit(me, c)) return sendJSON(res, 403, { error: 'Anda tidak berhak mengunggah pada siklus ini' });
