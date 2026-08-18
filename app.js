@@ -342,7 +342,8 @@
     return `<div class="mini-stepper">${steps.map(([k, l, ic], i) => {
       const reached = i <= activeIdx;
       const isCurrent = k === currentView;
-      return `<div class="ms-step ${k}${reached ? ' reached' : ''}${isCurrent ? ' current' : ''}">${ic} ${l}</div>`;
+      const clickable = k !== 'selesai';
+      return `<div class="ms-step ${k}${reached ? ' reached' : ''}${isCurrent ? ' current' : ''}${clickable ? ' clickable' : ''}"${clickable ? ` data-nav="${k}"` : ''}>${ic} ${l}</div>`;
     }).join('<span class="ms-sep">›</span>')}</div>`;
   }
   // Panel acuan ringkas (fase terdahulu terbawa ke fase berikutnya)

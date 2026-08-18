@@ -193,6 +193,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 /* mini stepper Plan→Do→See→Selesai */
 .mini-stepper { display: flex; align-items: center; flex-wrap: wrap; gap: .3rem; margin-bottom: 1rem; }
 .ms-step { font-size: .8rem; font-weight: 700; padding: .3rem .7rem; border-radius: 20px; background: #eef2f7; color: #94a3b8; border: 1.5px solid transparent; white-space: nowrap; }
+.ms-step.clickable { cursor: pointer; }
+.ms-step.clickable:hover { filter: brightness(.95); box-shadow: 0 2px 6px rgba(30, 66, 118, .15); }
 .ms-step.reached { color: #fff; }
 .ms-step.reached.plan { background: var(--plan); } .ms-step.reached.do { background: var(--do); } .ms-step.reached.see { background: var(--see); } .ms-step.reached.selesai { background: var(--gold); }
 .ms-step.current { outline: 3px solid rgba(47, 111, 237, .3); border-color: #fff; box-shadow: 0 2px 8px rgba(30, 66, 118, .18); transform: scale(1.04); }
