@@ -303,7 +303,7 @@
   });
 
   // ---------------- Phase views (dua kolom) ----------------
-  let pendingUploads = { 'plan.attachments': [], 'pelaksanaan.videos': [] };
+  let pendingUploads = { 'plan.attachments': [], 'pelaksanaan.videos': [], 'pelaksanaan.observasiDocs': [] };
 
   async function renderPhaseView(view) {
     await ensureActiveLoaded();
@@ -314,7 +314,7 @@
       bodyEl.innerHTML = `<div class="phase-empty"><span class="ic">🗂️</span>Belum ada siklus dipilih.<br><button class="btn btn-primary btn-sm" style="margin-top:.8rem" data-nav="dashboard">Ke Dashboard</button></div>`;
       return;
     }
-    pendingUploads = { 'plan.attachments': [], 'pelaksanaan.videos': [] };
+    pendingUploads = { 'plan.attachments': [], 'pelaksanaan.videos': [], 'pelaksanaan.observasiDocs': [] };
     const editable = can.edit(c), contrib = can.contribute(c);
     if (view === 'plan') bodyEl.innerHTML = planView(c, editable);
     else if (view === 'do') bodyEl.innerHTML = doView(c, editable);
@@ -362,6 +362,20 @@
     const d = c.pelaksanaan || {};
     const jadwal = d.tanggal ? fmtDate(d.tanggal) + (d.jam ? ' · ' + d.jam + ' WITA' : '') : '';
     return `<div class="panel"><div class="panel-head do"><span class="ph-ic">📋</span> Acuan Pelaksanaan (Do)</div><div class="panel-body ref-body">${refRow('Tanggal & jam', jadwal)}${refRow('Catatan pelaksanaan', d.catatan)}</div></div>`;
+  }
+  // Perangkat Observasi — diunggah Guru Model (pemilik), diunduh observer
+  function observasiDocsPanel(c, editable) {
+    const docs = ((c.pelaksanaan || {}).observasiDocs) || [];
+    const items = docs.length
+      ? `<div class="file-list">${docs.map(a => `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}" data-name="${esc(a.name)}" title="Buka ${esc(a.name)}">${esc(a.name)}</span><span class="sz">${fmtSize(a.size)}</span><a class="file-dl" href="${esc(a.url)}" download="${esc(a.name)}" title="Unduh">⬇️</a>${editable ? `<button type="button" class="x" data-rmodoc="${a.id}">✕</button>` : ''}</div>`).join('')}</div>`
+      : '<div class="file-empty">Belum ada perangkat observasi.</div>';
+    return `<div class="panel">
+      <div class="panel-head do"><span class="ph-ic">📋</span> Perangkat Observasi</div>
+      <div class="panel-body">
+        ${items}
+        ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="pelaksanaan.observasiDocs"></label>` : ''}
+      </div>
+    </div>`;
   }
 
   // PLAN
@@ -457,14 +471,15 @@
             ${dateTimeField('Tanggal & jam pelaksanaan', 'pelaksanaan.tanggal', 'pelaksanaan.jam', d.tanggal, d.jam, editable)}
             ${textField('Catatan pelaksanaan', 'pelaksanaan.catatan', d.catatan, editable, 'Kejadian penting saat open class…', true)}
             ${editable ? saveRow('do') : ''}
+            <div class="obs-block">
+              <div class="sub-head"><span class="ph-ic">🔭</span> Catatan Observasi</div>
+              ${threadHtml(c, 'do', can.contribute(c))}
+            </div>
           </div>
         </div>
       </div>
       <div class="phase-side">
-        <div class="panel">
-          <div class="panel-head do"><span class="ph-ic">🔭</span> Catatan Observasi</div>
-          <div class="panel-body">${threadHtml(c, 'do', can.contribute(c))}</div>
-        </div>
+        ${observasiDocsPanel(c, editable)}
         ${planRefPanel(c)}
         ${membersPanel(c)}
       </div>
@@ -607,6 +622,7 @@
     const rmAtt = ev.target.closest('[data-rmatt]');
     const rmVl = ev.target.closest('[data-rmvl]');
     const rmObs = ev.target.closest('[data-rmobs]');
+    const rmOdoc = ev.target.closest('[data-rmodoc]');
     const rment = ev.target.closest('[data-rment]');
     const prev = ev.target.closest('[data-preview]');
     const savePhase = ev.target.closest('[data-savephase]');
@@ -614,6 +630,7 @@
     const addVl = ev.target.closest('#addVideoLink');
     if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
     else if (rmVl) { c.pelaksanaan.videoLinks = (c.pelaksanaan.videoLinks || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
+    else if (rmOdoc) { c.pelaksanaan.observasiDocs = (c.pelaksanaan.observasiDocs || []).filter(a => a.id !== rmOdoc.dataset.rmodoc); await savePhaseData(c, state.view); }
     else if (rmObs) { await deleteObserverDoc(c, rmObs.dataset.rmobs); }
     else if (rment) { await deleteEntry(c, rment.dataset.rment); }
     else if (prev) { openPreview(prev.dataset.preview, prev.dataset.type, prev.dataset.name); }
@@ -635,7 +652,7 @@
       title: c.title, mapel: c.mapel, materi: c.materi, kelas: c.kelas, sekolah: c.sekolah,
       memberIds: (c.members || []).map(m => m.id), status: c.status,
       plan: { tujuan: c.plan.tujuan, desain: c.plan.desain, tanggalRencana: c.plan.tanggalRencana, jamRencana: c.plan.jamRencana, attachments: c.plan.attachments || [] },
-      pelaksanaan: { tanggal: c.pelaksanaan.tanggal, jam: c.pelaksanaan.jam, catatan: c.pelaksanaan.catatan, videoLinks: c.pelaksanaan.videoLinks || [], videos: c.pelaksanaan.videos || [] },
+      pelaksanaan: { tanggal: c.pelaksanaan.tanggal, jam: c.pelaksanaan.jam, catatan: c.pelaksanaan.catatan, videoLinks: c.pelaksanaan.videoLinks || [], videos: c.pelaksanaan.videos || [], observasiDocs: c.pelaksanaan.observasiDocs || [] },
       refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi }
     };
   }
@@ -644,7 +661,8 @@
     const payload = buildCyclePayload(c);
     payload.plan.attachments = [...(c.plan.attachments || []), ...pendingUploads['plan.attachments']];
     payload.pelaksanaan.videos = [...(c.pelaksanaan.videos || []), ...pendingUploads['pelaksanaan.videos']];
-    const hasNew = pendingUploads['plan.attachments'].length || pendingUploads['pelaksanaan.videos'].length;
+    payload.pelaksanaan.observasiDocs = [...(c.pelaksanaan.observasiDocs || []), ...pendingUploads['pelaksanaan.observasiDocs']];
+    const hasNew = pendingUploads['plan.attachments'].length || pendingUploads['pelaksanaan.videos'].length || pendingUploads['pelaksanaan.observasiDocs'].length;
     try {
       let d;
       if (hasNew) {
@@ -654,7 +672,7 @@
       } else {
         d = await api('PUT', '/cycles/' + c.id, payload);
       }
-      state.current = d.cycle; pendingUploads = { 'plan.attachments': [], 'pelaksanaan.videos': [] };
+      state.current = d.cycle; pendingUploads = { 'plan.attachments': [], 'pelaksanaan.videos': [], 'pelaksanaan.observasiDocs': [] };
       await loadCycles();
       await renderPhaseView(state.view);
       const hint = $(`[data-savehint="${phase}"]`); if (hint) { hint.hidden = false; setTimeout(() => { hint.hidden = true; }, 2000); }

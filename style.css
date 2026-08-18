@@ -381,6 +381,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .file-dl:hover { opacity: .7; }
 .obs-list .file-item { flex-wrap: wrap; }
 .obs-by { flex-basis: 100%; color: var(--muted); font-size: .72rem; padding-left: 1.7rem; }
+.obs-block { margin-top: 1rem; padding-top: .9rem; border-top: 2px dashed var(--line); }
+.sub-head { display: flex; align-items: center; gap: .4rem; font-weight: 700; color: var(--blue-dark); font-size: .95rem; margin-bottom: .6rem; }
 
 /* ---------- Toast ---------- */
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: .7rem 1.1rem; border-radius: 12px; font-size: .88rem; z-index: 90; box-shadow: var(--shadow-lg); max-width: 90vw; text-align: center; }

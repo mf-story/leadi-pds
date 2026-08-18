@@ -221,7 +221,8 @@ function cleanCycle(body, existing) {
             url: str(v && v.url, 600)
           })).filter(v => v.url)
         : (existing && existing.pelaksanaan ? (existing.pelaksanaan.videoLinks || []) : []),
-      videos: existing && existing.pelaksanaan ? (existing.pelaksanaan.videos || []) : []
+      videos: existing && existing.pelaksanaan ? (existing.pelaksanaan.videos || []) : [],
+      observasiDocs: existing && existing.pelaksanaan ? (existing.pelaksanaan.observasiDocs || []) : []
     },
     refleksi: {
       analisis: str((body.refleksi || {}).analisis, 8000),
@@ -276,7 +277,7 @@ function processAttachments(list, oldList) {
   return result;
 }
 function deleteCycleFiles(c) {
-  const all = [...((c.plan && c.plan.attachments) || []), ...((c.plan && c.plan.observerDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.videos) || [])];
+  const all = [...((c.plan && c.plan.attachments) || []), ...((c.plan && c.plan.observerDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.videos) || []), ...((c.pelaksanaan && c.pelaksanaan.observasiDocs) || [])];
   for (const a of all) {
     if (a.url) { try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(a.url))); } catch {} }
   }
@@ -496,6 +497,7 @@ async function handleApi(req, res, url) {
       c.createdBy = me.id;
       c.plan.attachments = processAttachments((body.plan || {}).attachments, []);
       c.pelaksanaan.videos = processAttachments((body.pelaksanaan || {}).videos, []);
+      c.pelaksanaan.observasiDocs = processAttachments((body.pelaksanaan || {}).observasiDocs, []);
       DB.cycles.push(c);
       notify(c.memberIds, me, c, `Anda ditambahkan pada siklus "${c.title}".`);
       saveDB();
@@ -519,9 +521,11 @@ async function handleApi(req, res, url) {
       if (!c.title) return sendJSON(res, 400, { error: 'Judul siklus wajib diisi' });
       const oldPlan = (existing.plan && existing.plan.attachments) || [];
       const oldVideos = (existing.pelaksanaan && existing.pelaksanaan.videos) || [];
+      const oldObsvDocs = (existing.pelaksanaan && existing.pelaksanaan.observasiDocs) || [];
       Object.assign(existing, c);
       existing.plan.attachments = processAttachments((body.plan || {}).attachments, oldPlan);
       existing.pelaksanaan.videos = processAttachments((body.pelaksanaan || {}).videos, oldVideos);
+      existing.pelaksanaan.observasiDocs = processAttachments((body.pelaksanaan || {}).observasiDocs, oldObsvDocs);
       const added = (existing.memberIds || []).filter(id => !prevMembers.includes(id));
       if (added.length) notify(added, me, existing, `Anda ditambahkan pada siklus "${existing.title}".`);
       saveDB();
