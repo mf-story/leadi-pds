@@ -476,8 +476,7 @@
             ${videoLinksHtml(d.videoLinks, editable)}
             ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="pelaksanaan.videos"></label>
               <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-ghost btn-sm" id="addVideoLink">+ Tautan</button></div>` : ''}
-            ${dateTimeField('Tanggal & jam pelaksanaan', 'pelaksanaan.tanggal', 'pelaksanaan.jam', doTgl, doJam, editable)}
-            ${textField('Catatan pelaksanaan', 'pelaksanaan.catatan', d.catatan, editable, 'Kejadian penting saat open class…', true)}
+            ${textField('Catatan', 'pelaksanaan.catatan', d.catatan, editable, 'Kejadian penting saat open class…', true)}
             ${editable ? saveRow('do') : ''}
             <div class="obs-block">
               <div class="sub-head"><span class="ph-ic">🔭</span> Diskusi Observasi</div>
