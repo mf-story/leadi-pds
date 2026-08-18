@@ -207,7 +207,8 @@ function cleanCycle(body, existing) {
       desain: str((body.plan || {}).desain, 8000),
       tanggalRencana: /^\d{4}-\d{2}-\d{2}$/.test((body.plan || {}).tanggalRencana) ? body.plan.tanggalRencana : '',
       jamRencana: /^\d{2}:\d{2}$/.test((body.plan || {}).jamRencana) ? body.plan.jamRencana : '',
-      attachments: existing && existing.plan ? (existing.plan.attachments || []) : []
+      attachments: existing && existing.plan ? (existing.plan.attachments || []) : [],
+      observerDocs: existing && existing.plan ? (existing.plan.observerDocs || []) : []
     },
     pelaksanaan: {
       tanggal: /^\d{4}-\d{2}-\d{2}$/.test((body.pelaksanaan || {}).tanggal) ? body.pelaksanaan.tanggal : '',
@@ -275,7 +276,7 @@ function processAttachments(list, oldList) {
   return result;
 }
 function deleteCycleFiles(c) {
-  const all = [...((c.plan && c.plan.attachments) || []), ...((c.pelaksanaan && c.pelaksanaan.videos) || [])];
+  const all = [...((c.plan && c.plan.attachments) || []), ...((c.plan && c.plan.observerDocs) || []), ...((c.pelaksanaan && c.pelaksanaan.videos) || [])];
   for (const a of all) {
     if (a.url) { try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(a.url))); } catch {} }
   }
@@ -581,6 +582,44 @@ async function handleApi(req, res, url) {
       c.updatedAt = Date.now();
       saveDB();
       return sendJSON(res, 200, { ok: true });
+    }
+    // unggah dokumen observer (perangkat perencanaan yang telah diisi/diunduh)
+    if (seg[1] && seg[2] === 'observer-docs' && !seg[3] && method === 'POST') {
+      const c = DB.cycles.find(x => x.id === seg[1]);
+      if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
+      if (!canContribute(me, c)) return sendJSON(res, 403, { error: 'Anda tidak terlibat dalam siklus ini' });
+      const body = await readBody(req);
+      const incoming = Array.isArray(body.attachments) ? body.attachments : [];
+      if (!c.plan) c.plan = {};
+      if (!Array.isArray(c.plan.observerDocs)) c.plan.observerDocs = [];
+      let addedCount = 0;
+      for (const a of incoming) {
+        if (!a || !a.data) continue;
+        const meta = saveUpload(a);
+        if (meta) {
+          c.plan.observerDocs.push({ ...meta, uploaderId: me.id, uploaderName: me.nama, uploadedAt: Date.now() });
+          addedCount++;
+        }
+      }
+      if (!addedCount) return sendJSON(res, 400, { error: 'Tidak ada berkas yang valid diunggah' });
+      c.updatedAt = Date.now();
+      notify(cycleRecipients(c), me, c, `${me.nama} mengunggah dokumen pada "${c.title}".`);
+      saveDB();
+      return sendJSON(res, 200, { cycle: enrichCycle(c) });
+    }
+    // hapus dokumen observer
+    if (seg[1] && seg[2] === 'observer-docs' && seg[3] && method === 'DELETE') {
+      const c = DB.cycles.find(x => x.id === seg[1]);
+      if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
+      const docs = (c.plan && c.plan.observerDocs) || [];
+      const doc = docs.find(d => d.id === seg[3]);
+      if (!doc) return sendJSON(res, 404, { error: 'Dokumen tidak ditemukan' });
+      if (!(isAdmin(me) || doc.uploaderId === me.id || c.ownerId === me.id)) return sendJSON(res, 403, { error: 'Hanya pengunggah, pemilik, atau admin yang dapat menghapus dokumen' });
+      if (doc.url) { try { fs.unlinkSync(path.join(UPLOAD_DIR, path.basename(doc.url))); } catch {} }
+      c.plan.observerDocs = docs.filter(d => d.id !== seg[3]);
+      c.updatedAt = Date.now();
+      saveDB();
+      return sendJSON(res, 200, { cycle: enrichCycle(c) });
     }
     // terbitkan ke repositori praktik baik
     if (seg[1] && seg[2] === 'publish' && method === 'POST') {

@@ -401,6 +401,7 @@
             ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="plan.attachments"></label>` : ''}
           </div>
         </div>
+        ${observerDocsPanel(c)}
         ${membersPanel(c)}
       </div>
     </div>`;
@@ -414,6 +415,24 @@
     list = list || [];
     if (!list.length) return `<div class="file-empty">Belum ada dokumen.</div>`;
     return `<div class="file-list">${list.map(a => `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}" data-name="${esc(a.name)}" title="Buka ${esc(a.name)}">${esc(a.name)}</span><span class="sz">${fmtSize(a.size)}</span><a class="file-dl" href="${esc(a.url)}" download="${esc(a.name)}" title="Unduh">⬇️</a>${editable ? `<button type="button" class="x" data-rmatt="${a.id}">✕</button>` : ''}</div>`).join('')}</div>`;
+  }
+
+  // Panel unggahan observer — dokumen perangkat perencanaan yang telah diunduh & diisi observer
+  function observerDocsPanel(c) {
+    const u = state.user;
+    const contrib = can.contribute(c);
+    const list = (c.plan && c.plan.observerDocs) || [];
+    const items = list.map(a => {
+      const canRm = u && (u.role === 'admin' || a.uploaderId === u.id || c.ownerId === u.id);
+      return `<div class="file-item"><span class="ic">${attIcon(a)}</span><span class="nm" data-preview="${esc(a.url)}" data-type="${esc(a.type)}" data-name="${esc(a.name)}" title="Buka ${esc(a.name)}">${esc(a.name)}</span><a class="file-dl" href="${esc(a.url)}" download="${esc(a.name)}" title="Unduh">⬇️</a>${canRm ? `<button type="button" class="x" data-rmobs="${a.id}">✕</button>` : ''}<span class="obs-by">👤 ${esc(a.uploaderName || '')}</span></div>`;
+    }).join('');
+    return `<div class="panel">
+      <div class="panel-head plan"><span class="ph-ic">📤</span> Unggahan Observer</div>
+      <div class="panel-body">
+        ${list.length ? `<div class="file-list obs-list">${items}</div>` : '<div class="file-empty">Belum ada dokumen dari observer.</div>'}
+        ${contrib ? `<label class="add-file-btn">➕ Unggah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" id="obsDocInput"></label>` : ''}
+      </div>
+    </div>`;
   }
 
   // DO
@@ -574,12 +593,20 @@
         else hideUploadProgress();
       });
     });
+    const obsInp = $('#obsDocInput', body);
+    if (obsInp) {
+      obsInp.addEventListener('change', async () => {
+        const files = Array.from(obsInp.files); obsInp.value = '';
+        if (files.length) await uploadObserverDocs(c, files);
+      });
+    }
   }
   // Handler klik panel fase — dipasang SEKALI per body (bukan tiap render) agar tidak menumpuk
   async function onPhaseBodyClick(ev) {
     const c = state.current; if (!c) return;
     const rmAtt = ev.target.closest('[data-rmatt]');
     const rmVl = ev.target.closest('[data-rmvl]');
+    const rmObs = ev.target.closest('[data-rmobs]');
     const rment = ev.target.closest('[data-rment]');
     const prev = ev.target.closest('[data-preview]');
     const savePhase = ev.target.closest('[data-savephase]');
@@ -587,6 +614,7 @@
     const addVl = ev.target.closest('#addVideoLink');
     if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
     else if (rmVl) { c.pelaksanaan.videoLinks = (c.pelaksanaan.videoLinks || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
+    else if (rmObs) { await deleteObserverDoc(c, rmObs.dataset.rmobs); }
     else if (rment) { await deleteEntry(c, rment.dataset.rment); }
     else if (prev) { openPreview(prev.dataset.preview, prev.dataset.type, prev.dataset.name); }
     else if (savePhase) { await savePhaseData(c, savePhase.dataset.savephase); }
@@ -655,6 +683,27 @@
   async function deleteEntry(c, eid) {
     if (!confirm('Hapus catatan ini?')) return;
     try { await api('DELETE', '/cycles/' + c.id + '/entries/' + eid); const d = await api('GET', '/cycles/' + c.id); state.current = d.cycle; await renderPhaseView(state.view); }
+    catch (ex) { toast(ex.message, 'err'); }
+  }
+  async function uploadObserverDocs(c, files) {
+    const atts = [];
+    for (const f of files) {
+      if (f.size > 80 * 1024 * 1024) { toast('“' + f.name + '” melebihi 80 MB', 'err'); continue; }
+      atts.push({ name: f.name, type: f.type, size: f.size, data: await fileToDataUrl(f) });
+    }
+    if (!atts.length) return;
+    try {
+      showUploadProgress('Mengunggah… 0%');
+      const d = await apiUpload('POST', '/cycles/' + c.id + '/observer-docs', { attachments: atts }, setUploadProgress);
+      hideUploadProgress('✅ Dokumen berhasil diunggah');
+      state.current = d.cycle;
+      await loadCycles();
+      await renderPhaseView(state.view);
+    } catch (ex) { hideUploadProgress(); toast(ex.message, 'err'); }
+  }
+  async function deleteObserverDoc(c, id) {
+    if (!confirm('Hapus dokumen ini?')) return;
+    try { const d = await api('DELETE', '/cycles/' + c.id + '/observer-docs/' + id); state.current = d.cycle; await renderPhaseView(state.view); }
     catch (ex) { toast(ex.message, 'err'); }
   }
 

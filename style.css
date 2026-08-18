@@ -379,6 +379,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .preview-note { color: rgba(255, 255, 255, .8); font-size: .78rem; margin-top: .5rem; text-align: center; }
 .file-dl { text-decoration: none; font-size: 1rem; padding: 0 .2rem; cursor: pointer; flex: 0 0 auto; }
 .file-dl:hover { opacity: .7; }
+.obs-list .file-item { flex-wrap: wrap; }
+.obs-by { flex-basis: 100%; color: var(--muted); font-size: .72rem; padding-left: 1.7rem; }
 
 /* ---------- Toast ---------- */
 .toast { position: fixed; bottom: 1.5rem; left: 50%; transform: translateX(-50%); background: var(--ink); color: #fff; padding: .7rem 1.1rem; border-radius: 12px; font-size: .88rem; z-index: 90; box-shadow: var(--shadow-lg); max-width: 90vw; text-align: center; }
