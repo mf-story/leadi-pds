@@ -257,6 +257,25 @@ function saveUpload(a) {
   fs.writeFileSync(path.join(UPLOAD_DIR, fname), buf);
   return { id, name, type: String(a.type || '').slice(0, 100), size: buf.length, url: '/uploads/' + fname };
 }
+// Simpan berkas biner (stream langsung ke disk, hemat memori untuk berkas besar)
+function saveUploadStream(req, origName, type) {
+  return new Promise((resolve, reject) => {
+    const name = String(origName || 'berkas').slice(0, 200);
+    let ext = (path.extname(name) || '').toLowerCase();
+    if (!/^\.[a-z0-9]{1,8}$/.test(ext)) ext = '';
+    const id = uid('att');
+    const fname = id + ext;
+    const dest = path.join(UPLOAD_DIR, fname);
+    const ws = fs.createWriteStream(dest);
+    let size = 0, aborted = false;
+    const fail = (err) => { if (aborted) return; aborted = true; try { ws.destroy(); } catch {} try { fs.unlinkSync(dest); } catch {} try { req.destroy(); } catch {} reject(err); };
+    req.on('data', chunk => { size += chunk.length; if (size > MAX_FILE) fail(new Error('Berkas melebihi batas 200 MB')); });
+    req.on('error', fail);
+    ws.on('error', fail);
+    ws.on('finish', () => { if (!aborted) resolve({ id, name, type: String(type || '').slice(0, 100), size, url: '/uploads/' + fname }); });
+    req.pipe(ws);
+  });
+}
 function processAttachments(list, oldList) {
   const result = [];
   const keptIds = new Set();
@@ -586,6 +605,30 @@ async function handleApi(req, res, url) {
       c.updatedAt = Date.now();
       saveDB();
       return sendJSON(res, 200, { ok: true });
+    }
+    // unggah berkas biner (stream, hemat memori) untuk video/dokumen besar
+    if (seg[1] && seg[2] === 'files' && method === 'POST') {
+      const c = DB.cycles.find(x => x.id === seg[1]);
+      if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
+      const field = String(url.searchParams.get('field') || '');
+      const allowed = ['plan.attachments', 'pelaksanaan.videos', 'pelaksanaan.observasiDocs', 'plan.observerDocs'];
+      if (!allowed.includes(field)) return sendJSON(res, 400, { error: 'Field tidak valid' });
+      const isObserverDocs = field === 'plan.observerDocs';
+      if (isObserverDocs ? !canContribute(me, c) : !canEdit(me, c)) return sendJSON(res, 403, { error: 'Anda tidak berhak mengunggah pada siklus ini' });
+      let origName = 'berkas';
+      try { origName = decodeURIComponent(url.searchParams.get('name') || 'berkas'); } catch {}
+      let meta;
+      try { meta = await saveUploadStream(req, origName, req.headers['content-type'] || ''); }
+      catch (e) { return sendJSON(res, 413, { error: e.message || 'Gagal mengunggah berkas' }); }
+      const [grp, key] = field.split('.');
+      if (!c[grp]) c[grp] = {};
+      if (!Array.isArray(c[grp][key])) c[grp][key] = [];
+      if (isObserverDocs) c[grp][key].push({ ...meta, uploaderId: me.id, uploaderName: me.nama, uploadedAt: Date.now() });
+      else c[grp][key].push(meta);
+      c.updatedAt = Date.now();
+      if (isObserverDocs) notify(cycleRecipients(c), me, c, `${me.nama} mengunggah dokumen pada "${c.title}".`);
+      saveDB();
+      return sendJSON(res, 200, { cycle: enrichCycle(c), attachment: meta });
     }
     // unggah dokumen observer (perangkat perencanaan yang telah diisi/diunduh)
     if (seg[1] && seg[2] === 'observer-docs' && !seg[3] && method === 'POST') {

@@ -52,6 +52,24 @@
       xhr.send(body ? JSON.stringify(body) : undefined);
     });
   }
+  // Unggah berkas biner langsung (tanpa base64) — hemat memori untuk video/dokumen besar
+  function apiUploadBinary(cycleId, field, file, onProgress) {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/api/cycles/' + cycleId + '/files?field=' + encodeURIComponent(field) + '&name=' + encodeURIComponent(file.name));
+      xhr.setRequestHeader('Content-Type', file.type || 'application/octet-stream');
+      const t = token(); if (t) xhr.setRequestHeader('Authorization', 'Bearer ' + t);
+      xhr.upload.onprogress = e => { if (e.lengthComputable && onProgress) onProgress(e.loaded / e.total); };
+      xhr.onload = () => {
+        let data = {}; try { data = JSON.parse(xhr.responseText); } catch {}
+        if (xhr.status === 401 && state.user) { handleExpired(); return reject(new Error(data.error || 'Sesi berakhir')); }
+        if (xhr.status < 200 || xhr.status >= 300) return reject(new Error(data.error || 'Gagal mengunggah'));
+        resolve(data);
+      };
+      xhr.onerror = () => reject(new Error('Gagal terhubung ke server'));
+      xhr.send(file);
+    });
+  }
   function showUploadProgress(label) { const b = $('#uploadBar'); b.className = 'upload-bar'; $('#uploadBarLabel').textContent = label || 'Mengunggah…'; $('#uploadBarFill').style.width = '0%'; b.hidden = false; }
   function setUploadProgress(frac) { const pct = Math.round((frac || 0) * 100); $('#uploadBarFill').style.width = pct + '%'; $('#uploadBarLabel').textContent = 'Mengunggah… ' + pct + '%'; }
   function uploadIndeterminate(label) { const b = $('#uploadBar'); b.className = 'upload-bar indeterminate'; $('#uploadBarLabel').textContent = label || 'Menyiapkan berkas…'; b.hidden = false; }
@@ -622,15 +640,17 @@
         const key = inp.dataset.upload;
         const files = Array.from(inp.files); inp.value = '';
         if (!files.length) return;
-        uploadIndeterminate('Menyiapkan berkas…');
-        let added = 0;
-        for (const f of files) {
-          if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
-          pendingUploads[key].push({ name: f.name, type: f.type, size: f.size, data: await fileToDataUrl(f) });
-          added++;
-        }
-        if (added) await savePhaseData(c, view);
-        else hideUploadProgress();
+        try {
+          showUploadProgress('Mengunggah… 0%');
+          let done = 0;
+          for (const f of files) {
+            if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
+            const d = await apiUploadBinary(c.id, key, f, setUploadProgress);
+            state.current = d.cycle; done++;
+          }
+          if (done) { hideUploadProgress('✅ Berkas berhasil diunggah'); await loadCycles(); await renderPhaseView(view); }
+          else hideUploadProgress();
+        } catch (ex) { hideUploadProgress(); toast(ex.message, 'err'); }
       });
     });
     const obsInp = $('#obsDocInput', body);
@@ -731,19 +751,17 @@
     catch (ex) { toast(ex.message, 'err'); }
   }
   async function uploadObserverDocs(c, files) {
-    const atts = [];
-    for (const f of files) {
-      if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
-      atts.push({ name: f.name, type: f.type, size: f.size, data: await fileToDataUrl(f) });
-    }
-    if (!atts.length) return;
+    files = Array.from(files);
     try {
       showUploadProgress('Mengunggah… 0%');
-      const d = await apiUpload('POST', '/cycles/' + c.id + '/observer-docs', { attachments: atts }, setUploadProgress);
-      hideUploadProgress('✅ Dokumen berhasil diunggah');
-      state.current = d.cycle;
-      await loadCycles();
-      await renderPhaseView(state.view);
+      let done = 0;
+      for (const f of files) {
+        if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
+        const d = await apiUploadBinary(c.id, 'plan.observerDocs', f, setUploadProgress);
+        state.current = d.cycle; done++;
+      }
+      if (done) { hideUploadProgress('✅ Dokumen berhasil diunggah'); await loadCycles(); await renderPhaseView(state.view); }
+      else hideUploadProgress();
     } catch (ex) { hideUploadProgress(); toast(ex.message, 'err'); }
   }
   async function deleteObserverDoc(c, id) {
@@ -807,7 +825,7 @@
     $('#cDocInput').value = ''; $('#cVidInput').value = ''; renderCreateFiles();
     $('#cycleError').hidden = true; $('#cycleModal').hidden = false;
   }
-  // Berkas terpilih saat membuat siklus baru (disimpan base64 lalu dikirim ke server)
+  // Berkas terpilih saat membuat siklus baru (objek File asli, diunggah biner setelah siklus dibuat)
   let cycleDocs = [], cycleVids = [];
   function renderCreateFiles() {
     const chip = (f, i, kind) => `<div class="file-item"><span class="ic">${attIcon({ type: f.type, url: f.name })}</span><span class="nm">${esc(f.name)}</span><span class="sz">${fmtSize(f.size)}</span><button type="button" class="x" data-rmcfile="${kind}:${i}">✕</button></div>`;
@@ -816,13 +834,10 @@
   }
   async function addCreateFiles(files, arr) {
     files = Array.from(files);
-    if (files.length) uploadIndeterminate('Menyiapkan berkas…');
     for (const f of files) {
       if (f.size > 200 * 1024 * 1024) { toast('“' + f.name + '” melebihi 200 MB', 'err'); continue; }
-      const data = await fileToDataUrl(f);
-      arr.push({ name: f.name, type: f.type, size: f.size, data });
+      arr.push(f);
     }
-    hideUploadProgress();
     renderCreateFiles();
   }
   $('#cDocInput').addEventListener('change', async e => { await addCreateFiles(e.target.files, cycleDocs); e.target.value = ''; });
@@ -862,16 +877,22 @@
         if (PHASE_VIEWS[state.view]) await renderPhaseView(state.view); else renderDashboard();
         toast('Tersimpan', 'ok');
       } else {
-        // Siklus baru: capaian & tujuan (rich text) + semua unggahan masuk ke perangkat Plan
-        payload.plan = { desain: sanitizeHtml($('#cCapaianArea').innerHTML), tujuan: sanitizeHtml($('#cTujuanArea').innerHTML), attachments: [...cycleDocs, ...cycleVids] };
-        const hasFiles = cycleDocs.length || cycleVids.length;
-        let d;
-        if (hasFiles) { showUploadProgress('Mengunggah… 0%'); d = await apiUpload('POST', '/cycles', payload, setUploadProgress); hideUploadProgress('✅ Siklus & berkas berhasil diunggah'); }
-        else d = await api('POST', '/cycles', payload);
+        // Siklus baru: capaian & tujuan (rich text); berkas diunggah biner setelah siklus dibuat
+        payload.plan = { desain: sanitizeHtml($('#cCapaianArea').innerHTML), tujuan: sanitizeHtml($('#cTujuanArea').innerHTML), attachments: [] };
+        const files = [...cycleDocs, ...cycleVids];
+        let d = await api('POST', '/cycles', payload);
+        if (files.length) {
+          showUploadProgress('Mengunggah… 0%');
+          for (const f of files) {
+            try { const r = await apiUploadBinary(d.cycle.id, 'plan.attachments', f, setUploadProgress); d = { cycle: r.cycle }; }
+            catch (ex) { toast('Gagal unggah “' + f.name + '”: ' + ex.message, 'err'); }
+          }
+          hideUploadProgress('✅ Siklus & berkas berhasil diunggah');
+        }
         await loadCycles();
         $('#cycleModal').hidden = true;
         state.activeId = d.cycle.id; state.current = null; localStorage.setItem(ACTIVE_KEY, state.activeId);
-        navigate('plan'); if (!hasFiles) toast('Siklus dibuat', 'ok');
+        navigate('plan'); if (!files.length) toast('Siklus dibuat', 'ok');
       }
     } catch (ex) { hideUploadProgress(); err.textContent = ex.message; err.hidden = false; }
   });
