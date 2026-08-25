@@ -419,7 +419,14 @@ async function handleApi(req, res, url) {
     const body = await readBody(req);
     const username = String(body.username || '').trim().toLowerCase();
     const user = DB.users.find(u => u.username.toLowerCase() === username);
-    if (!user || !verifyPassword(body.password || '', user.password)) {
+    if (!user) {
+      const pend = DB.accountRequests.find(r => r.username.toLowerCase() === username);
+      if (pend && verifyPassword(body.password || '', pend.password)) {
+        return sendJSON(res, 403, { error: 'Akun Anda sedang menunggu persetujuan admin. Silakan masuk lagi setelah disetujui.' });
+      }
+      return sendJSON(res, 401, { error: 'Username atau kata sandi salah' });
+    }
+    if (!verifyPassword(body.password || '', user.password)) {
       return sendJSON(res, 401, { error: 'Username atau kata sandi salah' });
     }
     const token = createSession(user.id);
@@ -446,6 +453,8 @@ async function handleApi(req, res, url) {
       nip: str(body.nip, 40), nuptk: str(body.nuptk, 40), nidn: str(body.nidn, 40),
       password: hashPassword(password), createdAt: new Date().toISOString()
     });
+    const adminIds = DB.users.filter(u => u.role === 'admin').map(u => u.id);
+    notify(adminIds, null, null, `Permintaan akun baru: ${nama} (@${username}) sebagai ${role === 'dosen' ? 'Dosen' : 'Guru'}. Tinjau di Kelola Pengguna.`);
     saveDB();
     return sendJSON(res, 200, { ok: true });
   }
@@ -914,6 +923,7 @@ async function handleApi(req, res, url) {
       };
       DB.users.push(u);
       DB.accountRequests.splice(idx, 1);
+      notify([u.id], null, null, 'Selamat datang! Akun Anda telah disetujui admin. Anda kini dapat menggunakan LeaDi-PDS.');
       saveDB();
       return sendJSON(res, 200, { user: publicUser(u) });
     }
