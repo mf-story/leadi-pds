@@ -1201,14 +1201,15 @@
     try {
       const d = await api('GET', '/notifications'); const badge = $('#notifBadge');
       if (d.unread > 0) { badge.textContent = d.unread; badge.hidden = false; } else badge.hidden = true;
-      if (open) $('#notifList').innerHTML = d.notifications.length ? d.notifications.map(n => `<div class="notif-item ${n.read ? '' : 'unread'}" data-notif="${n.cycleId || ''}"><span class="n-msg">${esc(n.message)}</span><span class="n-when">${relTime(n.createdAt)}</span></div>`).join('') : '<div class="notif-empty">Tidak ada notifikasi</div>';
+      if (open) $('#notifList').innerHTML = d.notifications.length ? d.notifications.map(n => `<div class="notif-item ${n.read ? '' : 'unread'}" data-notif="${n.cycleId || ''}" data-link="${n.link || ''}"><span class="n-msg">${esc(n.message)}</span><span class="n-when">${relTime(n.createdAt)}</span></div>`).join('') : '<div class="notif-empty">Tidak ada notifikasi</div>';
     } catch {}
   }
   $('#notifList').addEventListener('click', async e => {
     const it = e.target.closest('[data-notif]'); if (!it) return;
-    const cid = it.dataset.notif; $('#notifPanel').hidden = true;
+    const cid = it.dataset.notif; const link = it.dataset.link; $('#notifPanel').hidden = true;
     try { await api('POST', '/notifications/read', {}); loadNotifications(); } catch {}
-    if (cid) { state.activeId = cid; state.current = null; localStorage.setItem(ACTIVE_KEY, cid); await ensureActiveLoaded(); const c = state.current; navigate(c && PHASE_VIEWS[c.status] ? c.status : 'plan'); }
+    if (link) { navigate(link); }
+    else if (cid) { state.activeId = cid; state.current = null; localStorage.setItem(ACTIVE_KEY, cid); await ensureActiveLoaded(); const c = state.current; navigate(c && PHASE_VIEWS[c.status] ? c.status : 'plan'); }
   });
 
   // ---------------- Preview ----------------

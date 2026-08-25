@@ -335,13 +335,13 @@ function processUserPhoto(user, body) {
 // ------------------------------------------------------------------
 // Notifikasi in-app
 // ------------------------------------------------------------------
-function notify(recipientIds, actor, cycle, message) {
+function notify(recipientIds, actor, cycle, message, link) {
   const set = new Set(recipientIds.filter(Boolean));
   if (actor) set.delete(actor.id);
   set.forEach(rid => {
     if (!DB.users.some(u => u.id === rid)) return;
     DB.notifications.push({
-      id: uid('ntf'), userId: rid, cycleId: cycle ? cycle.id : null,
+      id: uid('ntf'), userId: rid, cycleId: cycle ? cycle.id : null, link: link || null,
       title: cycle ? cycle.title : 'LeaDi-PDS', message, read: false, createdAt: Date.now()
     });
   });
@@ -454,7 +454,7 @@ async function handleApi(req, res, url) {
       password: hashPassword(password), createdAt: new Date().toISOString()
     });
     const adminIds = DB.users.filter(u => u.role === 'admin').map(u => u.id);
-    notify(adminIds, null, null, `Permintaan akun baru: ${nama} (@${username}) sebagai ${role === 'dosen' ? 'Dosen' : 'Guru'}. Tinjau di Kelola Pengguna.`);
+    notify(adminIds, null, null, `Permintaan akun baru: ${nama} (@${username}) sebagai ${role === 'dosen' ? 'Dosen' : 'Guru'}. Tinjau di Kelola Pengguna.`, 'users');
     saveDB();
     return sendJSON(res, 200, { ok: true });
   }
@@ -918,7 +918,7 @@ async function handleApi(req, res, url) {
       }
       const u = {
         id: uid('usr'), username: r.username, nama: r.nama, jabatan: r.jabatan || '',
-        instansi: r.instansi || '', role: r.role, email: r.email || '', password: r.password,
+        instansi: r.instansi || '', role: 'observer', email: r.email || '', password: r.password,
         photoUrl: '', nip: r.nip || '', nuptk: r.nuptk || '', nidn: r.nidn || '', createdAt: new Date().toISOString()
       };
       DB.users.push(u);
