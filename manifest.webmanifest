@@ -1,7 +1,7 @@
 {
   "name": "LeaDi-PDS — Lesson Study Digital Platform",
   "short_name": "LeaDi-PDS",
-  "description": "Platform digital Lesson Study berbasis siklus Plan-Do-See untuk penguatan praktik pembelajaran berbasis bukti di SMP.",
+  "description": "Platform digital Lesson Study berbasis siklus Plan-Do-See untuk penguatan praktik pembelajaran berbasis bukti di Sekolah.",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
