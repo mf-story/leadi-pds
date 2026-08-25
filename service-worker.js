@@ -1,5 +1,5 @@
 /* LeaDi-PDS service worker — cache statis, lewati API & uploads */
-const CACHE = 'leadi-pds-v52';
+const CACHE = 'leadi-pds-v53';
 const ASSETS = [
   './',
   './index.html',

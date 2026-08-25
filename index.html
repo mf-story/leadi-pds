@@ -126,6 +126,14 @@
         <input type="search" id="schoolSearch" placeholder="🔍 Cari sekolah…" class="repo-search" />
         <div id="schoolList" class="user-list"></div>
       </section>
+
+      <!-- MASTER INSTANSI (admin) -->
+      <section id="view-institutions" class="view" hidden>
+        <div class="page-head"><h2>Master Instansi</h2><button id="newInstitutionBtn" class="btn btn-primary btn-sm">+ Instansi</button></div>
+        <p class="muted">Data instansi/lembaga (mis. kampus, dinas) — dipakai untuk asal Dosen Pengawas.</p>
+        <input type="search" id="institutionSearch" placeholder="🔍 Cari instansi…" class="repo-search" />
+        <div id="institutionList" class="user-list"></div>
+      </section>
     </main>
   </div>
 
@@ -146,6 +154,7 @@
         <button id="drawerNewCycle"><span>➕</span> Siklus Baru</button>
         <button data-nav="users" data-admin><span>👥</span> Kelola Pengguna</button>
         <button data-nav="schools" data-admin><span>🏫</span> Master Sekolah</button>
+        <button data-nav="institutions" data-admin><span>🏢</span> Master Instansi</button>
         <button id="drawerAccount"><span>⚙️</span> Akun Saya</button>
         <button id="drawerLogout" class="danger"><span>⏻</span> Keluar</button>
       </nav>
@@ -319,7 +328,7 @@
         </div>
         <div class="grid-2">
           <label>Kata sandi * <input type="password" id="rPassword" placeholder="min. 4 karakter" /></label>
-          <label>Instansi <input type="text" id="rInstansi" list="schoolOptions" maxlength="160" placeholder="asal sekolah/kampus" /></label>
+          <label id="rOrgLabel">Sekolah <input type="text" id="rInstansi" list="schoolOptions" maxlength="160" placeholder="pilih atau ketik sekolah…" /></label>
         </div>
         <p id="registerError" class="form-error" hidden></p>
         <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="registerModal">Batal</button><button type="submit" class="btn btn-primary">Kirim Permintaan</button></div>
@@ -348,6 +357,7 @@
   </div>
   <div id="printReport"></div>
   <datalist id="schoolOptions"></datalist>
+  <datalist id="institutionOptions"></datalist>
 
   <!-- Modal: master sekolah -->
   <div id="schoolModal" class="modal-overlay" hidden>
@@ -364,6 +374,24 @@
         <label>Alamat<input type="text" id="sAlamat" maxlength="200" placeholder="opsional" /></label>
         <p id="schoolError" class="form-error" hidden></p>
         <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="schoolModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal: master instansi -->
+  <div id="institutionModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3 id="institutionModalTitle">Instansi Baru</h3><button class="close-btn" data-close="institutionModal">✕</button></div>
+      <form id="institutionForm" class="modal-body">
+        <label>Nama instansi *<input type="text" id="iNama" required maxlength="160" placeholder="mis. Universitas Negeri Makassar" /></label>
+        <div class="grid-2">
+          <label>Jenis
+            <select id="iJenis"><option value="Universitas">Universitas</option><option value="Institut">Institut</option><option value="Sekolah Tinggi">Sekolah Tinggi</option><option value="Politeknik">Politeknik</option><option value="Dinas">Dinas</option><option value="Lainnya">Lainnya</option></select>
+          </label>
+          <label>Alamat<input type="text" id="iAlamat" maxlength="200" placeholder="opsional" /></label>
+        </div>
+        <p id="institutionError" class="form-error" hidden></p>
+        <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="institutionModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
       </form>
     </div>
   </div>

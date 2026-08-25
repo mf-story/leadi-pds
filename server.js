@@ -74,7 +74,7 @@ function loadDB() {
     catch (e) { console.error('Gagal membaca db.json, membuat baru:', e.message); DB = null; }
   }
   if (!DB) {
-    DB = { users: [], cycles: [], notifications: [], schools: [], accountRequests: [], meta: { createdAt: new Date().toISOString() } };
+    DB = { users: [], cycles: [], notifications: [], schools: [], institutions: [], accountRequests: [], meta: { createdAt: new Date().toISOString() } };
     DB.users.push({
       id: uid('usr'), username: 'admin', nama: 'Administrator', role: 'admin',
       jabatan: 'Pengelola Sistem', instansi: '', password: hashPassword('admin123'),
@@ -87,6 +87,7 @@ function loadDB() {
   if (!Array.isArray(DB.cycles)) DB.cycles = [];
   if (!Array.isArray(DB.notifications)) DB.notifications = [];
   if (!Array.isArray(DB.schools)) DB.schools = [];
+  if (!Array.isArray(DB.institutions)) DB.institutions = [];
   if (!Array.isArray(DB.accountRequests)) DB.accountRequests = [];
 }
 function saveDB() {
@@ -449,6 +450,14 @@ async function handleApi(req, res, url) {
     return sendJSON(res, 200, { ok: true });
   }
 
+  // --- OPSI PUBLIK (nama sekolah & instansi utk form ajukan akun, tanpa auth) ---
+  if (seg[0] === 'public' && seg[1] === 'options' && method === 'GET') {
+    return sendJSON(res, 200, {
+      schools: (DB.schools || []).map(s => s.nama).sort((a, b) => a.localeCompare(b)),
+      institutions: (DB.institutions || []).map(s => s.nama).sort((a, b) => a.localeCompare(b))
+    });
+  }
+
   const me = getSessionUser(req);
   if (!me) return sendJSON(res, 401, { error: 'Sesi berakhir, silakan masuk kembali' });
 
@@ -531,6 +540,46 @@ async function handleApi(req, res, url) {
       const before = DB.schools.length;
       DB.schools = DB.schools.filter(x => x.id !== seg[1]);
       if (DB.schools.length === before) return sendJSON(res, 404, { error: 'Sekolah tidak ditemukan' });
+      saveDB();
+      return sendJSON(res, 200, { ok: true });
+    }
+  }
+
+  // ================= MASTER INSTANSI =================
+  if (seg[0] === 'institutions') {
+    if (!seg[1] && method === 'GET') {
+      return sendJSON(res, 200, { institutions: DB.institutions.slice().sort((a, b) => a.nama.localeCompare(b.nama)) });
+    }
+    if (!isAdmin(me)) return sendJSON(res, 403, { error: 'Hanya admin yang boleh mengelola master instansi' });
+    if (!seg[1] && method === 'POST') {
+      const body = await readBody(req);
+      const nama = str(body.nama, 160);
+      if (!nama) return sendJSON(res, 400, { error: 'Nama instansi wajib diisi' });
+      if (DB.institutions.some(s => s.nama.toLowerCase() === nama.toLowerCase())) return sendJSON(res, 400, { error: 'Instansi dengan nama itu sudah ada' });
+      const s = { id: uid('inst'), nama, jenis: str(body.jenis, 40), alamat: str(body.alamat, 200), createdAt: new Date().toISOString() };
+      DB.institutions.push(s);
+      saveDB();
+      return sendJSON(res, 200, { institution: s });
+    }
+    if (seg[1] && method === 'PUT') {
+      const s = DB.institutions.find(x => x.id === seg[1]);
+      if (!s) return sendJSON(res, 404, { error: 'Instansi tidak ditemukan' });
+      const body = await readBody(req);
+      if (body.nama != null) {
+        const nama = str(body.nama, 160);
+        if (!nama) return sendJSON(res, 400, { error: 'Nama instansi wajib diisi' });
+        if (DB.institutions.some(x => x.id !== s.id && x.nama.toLowerCase() === nama.toLowerCase())) return sendJSON(res, 400, { error: 'Instansi dengan nama itu sudah ada' });
+        s.nama = nama;
+      }
+      if (body.jenis != null) s.jenis = str(body.jenis, 40);
+      if (body.alamat != null) s.alamat = str(body.alamat, 200);
+      saveDB();
+      return sendJSON(res, 200, { institution: s });
+    }
+    if (seg[1] && method === 'DELETE') {
+      const before = DB.institutions.length;
+      DB.institutions = DB.institutions.filter(x => x.id !== seg[1]);
+      if (DB.institutions.length === before) return sendJSON(res, 404, { error: 'Instansi tidak ditemukan' });
       saveDB();
       return sendJSON(res, 200, { ok: true });
     }

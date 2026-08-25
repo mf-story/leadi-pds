@@ -132,7 +132,22 @@
     } catch (ex) { err.textContent = ex.message; err.hidden = false; }
   });
   // Ajukan akun (guru/dosen) → menunggu persetujuan admin
-  $('#showRegisterBtn').addEventListener('click', () => { $('#registerForm').reset(); $('#registerError').hidden = true; $('#registerModal').hidden = false; });
+  $('#showRegisterBtn').addEventListener('click', async () => { $('#registerForm').reset(); $('#registerError').hidden = true; await loadPublicOptions(); updateRegisterOrgField(); $('#registerModal').hidden = false; });
+  $('#rRole').addEventListener('change', updateRegisterOrgField);
+  function updateRegisterOrgField() {
+    const isDosen = $('#rRole').value === 'dosen';
+    if ($('#rOrgLabel').firstChild) $('#rOrgLabel').firstChild.nodeValue = isDosen ? 'Instansi ' : 'Sekolah ';
+    const inp = $('#rInstansi');
+    inp.setAttribute('list', isDosen ? 'institutionOptions' : 'schoolOptions');
+    inp.placeholder = isDosen ? 'pilih atau ketik instansi…' : 'pilih atau ketik sekolah…';
+  }
+  async function loadPublicOptions() {
+    try {
+      const d = await api('GET', '/public/options');
+      const fill = (id, arr) => { const dl = $('#' + id); if (dl) dl.innerHTML = (arr || []).map(n => `<option value="${esc(n)}"></option>`).join(''); };
+      fill('schoolOptions', d.schools); fill('institutionOptions', d.institutions);
+    } catch {}
+  }
   $('#registerForm').addEventListener('submit', async e => {
     e.preventDefault(); const err = $('#registerError'); err.hidden = true;
     const payload = {
@@ -152,6 +167,7 @@
     applyRoleUI(); renderAccount();
     try { const d = await api('GET', '/directory'); state.directory = d.users; } catch {}
     try { const s = await api('GET', '/schools'); state.schools = s.schools; renderSchoolOptions(); } catch {}
+    try { const i = await api('GET', '/institutions'); state.institutions = i.institutions; renderInstitutionOptions(); } catch {}
     await loadCycles();
     state.activeId = localStorage.getItem(ACTIVE_KEY) || (state.cycles[0] && state.cycles[0].id) || null;
     navigate('dashboard');
@@ -200,6 +216,7 @@
     else if (view === 'repo') loadRepo();
     else if (view === 'users') loadUsers();
     else if (view === 'schools') loadSchools();
+    else if (view === 'institutions') loadInstitutions();
     window.scrollTo(0, 0);
   }
   document.addEventListener('click', e => {
@@ -1073,6 +1090,54 @@
     try {
       if (id) await api('PUT', '/schools/' + id, payload); else await api('POST', '/schools', payload);
       $('#schoolModal').hidden = true; await loadSchools(); toast('Tersimpan', 'ok');
+    } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+  });
+
+  // ---------------- Master Instansi ----------------
+  function renderInstitutionOptions() {
+    const dl = $('#institutionOptions');
+    if (dl) dl.innerHTML = (state.institutions || []).map(s => `<option value="${esc(s.nama)}">${s.jenis ? esc(s.jenis) : ''}${s.alamat ? ' · ' + esc(s.alamat) : ''}</option>`).join('');
+  }
+  async function loadInstitutions() {
+    try { const d = await api('GET', '/institutions'); state.institutions = d.institutions; renderInstitutionOptions(); renderInstitutions(); }
+    catch (ex) { toast(ex.message, 'err'); }
+  }
+  function renderInstitutions() {
+    const q = ($('#institutionSearch').value || '').toLowerCase();
+    let list = state.institutions || [];
+    if (q) list = list.filter(s => (s.nama + ' ' + (s.alamat || '') + ' ' + (s.jenis || '')).toLowerCase().includes(q));
+    $('#institutionList').innerHTML = list.length ? list.map(s => `
+      <div class="user-item"><div class="u-ava">🏢</div>
+        <div class="u-main"><b>${esc(s.nama)} ${s.jenis ? `<span class="role-tag dosen">${esc(s.jenis)}</span>` : ''}</b><div class="u-sub">${s.alamat ? esc(s.alamat) : ''}</div></div>
+        <div class="u-actions"><button class="btn btn-ghost btn-sm" data-editinst="${s.id}">✎</button><button class="btn btn-danger btn-sm" data-delinst="${s.id}">🗑</button></div>
+      </div>`).join('') : emptyState('🏢', 'Belum ada instansi. Klik "+ Instansi".');
+  }
+  $('#institutionSearch').addEventListener('input', renderInstitutions);
+  $('#newInstitutionBtn').addEventListener('click', () => openInstitutionForm(null));
+  function openInstitutionForm(s) {
+    $('#institutionModalTitle').textContent = s ? 'Ubah Instansi' : 'Instansi Baru';
+    $('#institutionForm').dataset.editId = s ? s.id : '';
+    $('#iNama').value = s ? s.nama : ''; $('#iJenis').value = s ? (s.jenis || 'Universitas') : 'Universitas';
+    $('#iAlamat').value = s ? (s.alamat || '') : '';
+    $('#institutionError').hidden = true; $('#institutionModal').hidden = false;
+  }
+  $('#institutionList').addEventListener('click', e => {
+    const ed = e.target.closest('[data-editinst]'); const del = e.target.closest('[data-delinst]');
+    if (ed) openInstitutionForm((state.institutions || []).find(s => s.id === ed.dataset.editinst));
+    if (del) delInstitution(del.dataset.delinst);
+  });
+  async function delInstitution(id) {
+    if (!confirm('Hapus instansi ini dari master?')) return;
+    try { await api('DELETE', '/institutions/' + id); await loadInstitutions(); toast('Instansi dihapus', 'ok'); }
+    catch (ex) { toast(ex.message, 'err'); }
+  }
+  $('#institutionForm').addEventListener('submit', async e => {
+    e.preventDefault(); const err = $('#institutionError'); err.hidden = true;
+    const id = $('#institutionForm').dataset.editId;
+    const payload = { nama: $('#iNama').value, jenis: $('#iJenis').value, alamat: $('#iAlamat').value };
+    try {
+      if (id) await api('PUT', '/institutions/' + id, payload); else await api('POST', '/institutions', payload);
+      $('#institutionModal').hidden = true; await loadInstitutions(); toast('Tersimpan', 'ok');
     } catch (ex) { err.textContent = ex.message; err.hidden = false; }
   });
 
