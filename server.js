@@ -74,7 +74,7 @@ function loadDB() {
     catch (e) { console.error('Gagal membaca db.json, membuat baru:', e.message); DB = null; }
   }
   if (!DB) {
-    DB = { users: [], cycles: [], notifications: [], schools: [], meta: { createdAt: new Date().toISOString() } };
+    DB = { users: [], cycles: [], notifications: [], schools: [], accountRequests: [], meta: { createdAt: new Date().toISOString() } };
     DB.users.push({
       id: uid('usr'), username: 'admin', nama: 'Administrator', role: 'admin',
       jabatan: 'Pengelola Sistem', instansi: '', password: hashPassword('admin123'),
@@ -87,6 +87,7 @@ function loadDB() {
   if (!Array.isArray(DB.cycles)) DB.cycles = [];
   if (!Array.isArray(DB.notifications)) DB.notifications = [];
   if (!Array.isArray(DB.schools)) DB.schools = [];
+  if (!Array.isArray(DB.accountRequests)) DB.accountRequests = [];
 }
 function saveDB() {
   const tmp = DB_FILE + '.tmp';
@@ -424,6 +425,30 @@ async function handleApi(req, res, url) {
     return sendJSON(res, 200, { token, user: publicUser(user) });
   }
 
+  // --- REGISTER (ajukan akun guru/dosen, tanpa auth; disetujui admin) ---
+  if (seg[0] === 'register' && method === 'POST') {
+    const body = await readBody(req);
+    const username = String(body.username || '').trim().toLowerCase();
+    const nama = str(body.nama, 120);
+    const role = (body.role === 'dosen' || body.role === 'guru') ? body.role : 'guru';
+    const email = str(body.email, 160);
+    const password = String(body.password || '');
+    if (!/^[a-z0-9._-]{3,30}$/.test(username)) return sendJSON(res, 400, { error: 'Username 3-30 karakter (huruf kecil/angka/._-)' });
+    if (!nama) return sendJSON(res, 400, { error: 'Nama wajib diisi' });
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return sendJSON(res, 400, { error: 'Email tidak valid' });
+    if (password.length < 4) return sendJSON(res, 400, { error: 'Kata sandi minimal 4 karakter' });
+    if (DB.users.some(u => u.username.toLowerCase() === username)) return sendJSON(res, 400, { error: 'Username sudah dipakai' });
+    if (DB.accountRequests.some(r => r.username.toLowerCase() === username)) return sendJSON(res, 400, { error: 'Username sudah diajukan, menunggu persetujuan admin' });
+    DB.accountRequests.push({
+      id: uid('req'), username, nama, role, email,
+      jabatan: str(body.jabatan, 150), instansi: str(body.instansi, 160),
+      nip: str(body.nip, 40), nuptk: str(body.nuptk, 40), nidn: str(body.nidn, 40),
+      password: hashPassword(password), createdAt: new Date().toISOString()
+    });
+    saveDB();
+    return sendJSON(res, 200, { ok: true });
+  }
+
   const me = getSessionUser(req);
   if (!me) return sendJSON(res, 401, { error: 'Sesi berakhir, silakan masuk kembali' });
 
@@ -452,6 +477,7 @@ async function handleApi(req, res, url) {
     if (body.nama != null) me.nama = str(body.nama, 120) || me.nama;
     if (body.jabatan != null) me.jabatan = str(body.jabatan, 150);
     if (body.instansi != null) me.instansi = str(body.instansi, 160);
+    if (body.email != null) me.email = str(body.email, 160);
     if (body.nip != null) me.nip = str(body.nip, 40);
     if (body.nuptk != null) me.nuptk = str(body.nuptk, 40);
     if (body.nidn != null) me.nidn = str(body.nidn, 40);
@@ -778,6 +804,7 @@ async function handleApi(req, res, url) {
       if (password.length < 4) return sendJSON(res, 400, { error: 'Kata sandi minimal 4 karakter' });
       if (DB.users.some(u => u.username.toLowerCase() === username)) return sendJSON(res, 400, { error: 'Username sudah dipakai' });
       const u = { id: uid('usr'), username, nama, jabatan, instansi, role, password: hashPassword(password), photoUrl: '', createdAt: new Date().toISOString() };
+      u.email = str(body.email, 160);
       u.nip = str(body.nip, 40); u.nuptk = str(body.nuptk, 40); u.nidn = str(body.nidn, 40);
       processUserPhoto(u, body);
       DB.users.push(u);
@@ -791,6 +818,7 @@ async function handleApi(req, res, url) {
       if (body.nama != null) u.nama = str(body.nama, 120) || u.nama;
       if (body.jabatan != null) u.jabatan = str(body.jabatan, 150);
       if (body.instansi != null) u.instansi = str(body.instansi, 160);
+      if (body.email != null) u.email = str(body.email, 160);
       if (body.nip != null) u.nip = str(body.nip, 40);
       if (body.nuptk != null) u.nuptk = str(body.nuptk, 40);
       if (body.nidn != null) u.nidn = str(body.nidn, 40);
@@ -811,6 +839,39 @@ async function handleApi(req, res, url) {
       if (u.id === me.id) return sendJSON(res, 400, { error: 'Tidak dapat menghapus akun sendiri' });
       if (u.role === 'admin' && DB.users.filter(x => x.role === 'admin').length <= 1) return sendJSON(res, 400, { error: 'Minimal harus ada satu admin' });
       DB.users = DB.users.filter(x => x.id !== u.id);
+      saveDB();
+      return sendJSON(res, 200, { ok: true });
+    }
+  }
+
+  // ================= PERMINTAAN AKUN (admin menyetujui) =================
+  if (seg[0] === 'account-requests') {
+    if (!isAdmin(me)) return sendJSON(res, 403, { error: 'Hanya admin yang boleh mengelola permintaan akun' });
+    if (!seg[1] && method === 'GET') {
+      return sendJSON(res, 200, { requests: DB.accountRequests.map(({ password, ...r }) => r) });
+    }
+    if (seg[1] && seg[2] === 'approve' && method === 'POST') {
+      const idx = DB.accountRequests.findIndex(r => r.id === seg[1]);
+      if (idx < 0) return sendJSON(res, 404, { error: 'Permintaan tidak ditemukan' });
+      const r = DB.accountRequests[idx];
+      if (DB.users.some(u => u.username.toLowerCase() === r.username.toLowerCase())) {
+        DB.accountRequests.splice(idx, 1); saveDB();
+        return sendJSON(res, 400, { error: 'Username sudah dipakai; permintaan dibatalkan' });
+      }
+      const u = {
+        id: uid('usr'), username: r.username, nama: r.nama, jabatan: r.jabatan || '',
+        instansi: r.instansi || '', role: r.role, email: r.email || '', password: r.password,
+        photoUrl: '', nip: r.nip || '', nuptk: r.nuptk || '', nidn: r.nidn || '', createdAt: new Date().toISOString()
+      };
+      DB.users.push(u);
+      DB.accountRequests.splice(idx, 1);
+      saveDB();
+      return sendJSON(res, 200, { user: publicUser(u) });
+    }
+    if (seg[1] && method === 'DELETE') {
+      const before = DB.accountRequests.length;
+      DB.accountRequests = DB.accountRequests.filter(r => r.id !== seg[1]);
+      if (DB.accountRequests.length === before) return sendJSON(res, 404, { error: 'Permintaan tidak ditemukan' });
       saveDB();
       return sendJSON(res, 200, { ok: true });
     }

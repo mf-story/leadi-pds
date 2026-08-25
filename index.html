@@ -25,6 +25,7 @@
         <button type="submit" class="btn btn-primary btn-block">Masuk</button>
       </form>
       <p class="login-demo">Akun demo: <b>admin/dosen/guru/observer</b> — sandi = username + 123</p>
+      <button type="button" id="showRegisterBtn" class="btn btn-ghost btn-block" style="margin-top:.55rem">✍️ Ajukan Akun Baru</button>
     </div>
     <p class="login-foot">Penguatan praktik pembelajaran berbasis bukti di SMP</p>
   </section>
@@ -110,6 +111,11 @@
       <!-- USERS (admin) -->
       <section id="view-users" class="view" hidden>
         <div class="page-head"><h2>Kelola Pengguna</h2><button id="newUserBtn" class="btn btn-primary btn-sm">+ Pengguna</button></div>
+        <div id="requestsSection" hidden>
+          <h3 style="margin:.2rem 0 .6rem">📩 Permintaan Akun <span id="reqBadge" class="req-badge"></span></h3>
+          <div id="requestList" class="user-list"></div>
+          <hr style="margin:1rem 0" />
+        </div>
         <div id="userList" class="user-list"></div>
       </section>
 
@@ -243,6 +249,7 @@
           <label>Nama <input type="text" id="accNameInput" maxlength="120" /></label>
           <label>Jabatan <input type="text" id="accJabatan" maxlength="150" placeholder="mis. Guru Matematika" /></label>
           <label>Instansi <input type="text" id="accInstansi" list="schoolOptions" maxlength="160" placeholder="mis. SMPN 1 Makassar" /></label>
+          <label>Email <input type="email" id="accEmail" maxlength="160" placeholder="nama@contoh.com" /></label>
           <button type="submit" class="btn btn-primary btn-sm">Simpan profil</button>
         </form>
         <hr />
@@ -283,6 +290,9 @@
           <label>Jabatan <input type="text" id="uJabatan" maxlength="150" /></label>
           <label>Instansi <input type="text" id="uInstansi" list="schoolOptions" maxlength="160" placeholder="Pilih atau ketik sekolah…" /></label>
         </div>
+        <div class="grid-2" id="uEmailRow">
+          <label>Email <input type="email" id="uEmail" maxlength="160" placeholder="nama@contoh.com" /></label>
+        </div>
         <div class="grid-2" id="uIdRow">
           <label id="uNipWrap">NIP <input type="text" id="uNip" maxlength="40" inputmode="numeric" /></label>
           <label id="uNuptkWrap">NUPTK <input type="text" id="uNuptk" maxlength="40" inputmode="numeric" /></label>
@@ -290,6 +300,29 @@
         </div>
         <p id="userError" class="form-error" hidden></p>
         <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="userModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="registerModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3>Ajukan Akun Baru</h3><button class="close-btn" data-close="registerModal">✕</button></div>
+      <form id="registerForm" class="modal-body">
+        <p class="muted" style="margin-top:0">Untuk Guru Model dan Dosen Pengawas. Akun aktif setelah disetujui admin.</p>
+        <div class="grid-2">
+          <label>Nama * <input type="text" id="rNama" required maxlength="120" /></label>
+          <label>Peran *<select id="rRole"><option value="guru">Guru Model</option><option value="dosen">Dosen Pengawas</option></select></label>
+        </div>
+        <div class="grid-2">
+          <label>Username * <input type="text" id="rUsername" maxlength="30" placeholder="huruf kecil/angka" /></label>
+          <label>Email * <input type="email" id="rEmail" maxlength="160" placeholder="nama@contoh.com" /></label>
+        </div>
+        <div class="grid-2">
+          <label>Kata sandi * <input type="password" id="rPassword" placeholder="min. 4 karakter" /></label>
+          <label>Instansi <input type="text" id="rInstansi" list="schoolOptions" maxlength="160" placeholder="asal sekolah/kampus" /></label>
+        </div>
+        <p id="registerError" class="form-error" hidden></p>
+        <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="registerModal">Batal</button><button type="submit" class="btn btn-primary">Kirim Permintaan</button></div>
       </form>
     </div>
   </div>

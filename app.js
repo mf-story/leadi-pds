@@ -131,6 +131,21 @@
       localStorage.setItem(TOKEN_KEY, data.token); state.user = data.user; await startApp();
     } catch (ex) { err.textContent = ex.message; err.hidden = false; }
   });
+  // Ajukan akun (guru/dosen) → menunggu persetujuan admin
+  $('#showRegisterBtn').addEventListener('click', () => { $('#registerForm').reset(); $('#registerError').hidden = true; $('#registerModal').hidden = false; });
+  $('#registerForm').addEventListener('submit', async e => {
+    e.preventDefault(); const err = $('#registerError'); err.hidden = true;
+    const payload = {
+      nama: $('#rNama').value, role: $('#rRole').value,
+      username: $('#rUsername').value.toLowerCase().replace(/[^a-z0-9._-]/g, ''),
+      email: $('#rEmail').value.trim(), password: $('#rPassword').value, instansi: $('#rInstansi').value
+    };
+    try {
+      await api('POST', '/register', payload);
+      $('#registerModal').hidden = true;
+      toast('Permintaan terkirim. Akun aktif setelah disetujui admin.', 'ok');
+    } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+  });
 
   async function startApp() {
     $('#loginScreen').hidden = true; $('#app').hidden = false;
@@ -156,7 +171,7 @@
     setPhotoPreview($('#accPhotoPreview'), u.photoUrl || '', u.nama);
     $('#accName').textContent = u.nama;
     const rt = $('#accRole'); rt.textContent = ROLE_LABEL[u.role]; rt.className = 'role-tag ' + u.role;
-    $('#accNameInput').value = u.nama; $('#accJabatan').value = u.jabatan || ''; $('#accInstansi').value = u.instansi || '';
+    $('#accNameInput').value = u.nama; $('#accJabatan').value = u.jabatan || ''; $('#accInstansi').value = u.instansi || ''; $('#accEmail').value = u.email || '';
   }
   // Avatar dgn ikon inisial di dalam span, foto sbg background pada tombol
   function setAvatarEl(btn, span, u) {
@@ -919,11 +934,29 @@
   $('#repoSearch').addEventListener('input', renderRepo);
 
   // ---------------- Users (admin) ----------------
-  async function loadUsers() { try { const d = await api('GET', '/users'); state._users = d.users; renderUsers(); } catch (ex) { toast(ex.message, 'err'); } }
+  async function loadUsers() { try { const d = await api('GET', '/users'); state._users = d.users; renderUsers(); } catch (ex) { toast(ex.message, 'err'); } loadAccountRequests(); }
+  async function loadAccountRequests() {
+    try { const d = await api('GET', '/account-requests'); state._requests = d.requests; renderRequests(); } catch {}
+  }
+  function renderRequests() {
+    const list = state._requests || [];
+    $('#requestsSection').hidden = !list.length;
+    $('#reqBadge').textContent = list.length ? list.length : '';
+    $('#requestList').innerHTML = list.map(r => `
+      <div class="user-item"><div class="u-ava">${initials(r.nama)}</div>
+        <div class="u-main"><b>${esc(r.nama)} <span class="role-tag ${r.role}">${ROLE_LABEL[r.role]}</span></b><div class="u-sub">@${esc(r.username)}${r.email ? ' · ✉ ' + esc(r.email) : ''}${r.instansi ? ' · ' + esc(r.instansi) : ''}</div></div>
+        <div class="u-actions"><button class="btn btn-primary btn-sm" data-approvereq="${r.id}">✓ Setujui</button><button class="btn btn-danger btn-sm" data-rejectreq="${r.id}">✕ Tolak</button></div>
+      </div>`).join('');
+  }
+  $('#requestList').addEventListener('click', async e => {
+    const ap = e.target.closest('[data-approvereq]'); const rj = e.target.closest('[data-rejectreq]');
+    if (ap) { try { await api('POST', '/account-requests/' + ap.dataset.approvereq + '/approve'); toast('Akun disetujui', 'ok'); await loadUsers(); try { const dir = await api('GET', '/directory'); state.directory = dir.users; } catch {} } catch (ex) { toast(ex.message, 'err'); } }
+    if (rj) { if (!confirm('Tolak & hapus permintaan ini?')) return; try { await api('DELETE', '/account-requests/' + rj.dataset.rejectreq); toast('Permintaan ditolak', 'ok'); await loadAccountRequests(); } catch (ex) { toast(ex.message, 'err'); } }
+  });
   function renderUsers() {
     $('#userList').innerHTML = (state._users || []).map(u => `
       <div class="user-item"><div class="u-ava">${u.photoUrl ? `<img src="${esc(u.photoUrl)}" alt="">` : initials(u.nama)}</div>
-        <div class="u-main"><b>${esc(u.nama)} <span class="role-tag ${u.role}">${ROLE_LABEL[u.role]}</span></b><div class="u-sub">@${esc(u.username)}${u.jabatan ? ' · ' + esc(u.jabatan) : ''}${u.instansi ? ' · ' + esc(u.instansi) : ''}${u.nip ? ' · NIP ' + esc(u.nip) : ''}${u.nuptk ? ' · NUPTK ' + esc(u.nuptk) : ''}${u.nidn ? ' · NIDN ' + esc(u.nidn) : ''}</div></div>
+        <div class="u-main"><b>${esc(u.nama)} <span class="role-tag ${u.role}">${ROLE_LABEL[u.role]}</span></b><div class="u-sub">@${esc(u.username)}${u.jabatan ? ' · ' + esc(u.jabatan) : ''}${u.instansi ? ' · ' + esc(u.instansi) : ''}${u.email ? ' · ✉ ' + esc(u.email) : ''}${u.nip ? ' · NIP ' + esc(u.nip) : ''}${u.nuptk ? ' · NUPTK ' + esc(u.nuptk) : ''}${u.nidn ? ' · NIDN ' + esc(u.nidn) : ''}</div></div>
         <div class="u-actions"><button class="btn btn-ghost btn-sm" data-edituser="${u.id}">✎</button>${u.id !== state.user.id ? `<button class="btn btn-danger btn-sm" data-deluser="${u.id}">🗑</button>` : ''}</div>
       </div>`).join('');
   }
@@ -937,6 +970,7 @@
     $('#uNuptkWrap').hidden = !isGuru;
     $('#uNidnWrap').hidden = !isDosen;
     $('#uIdRow').hidden = !(isGuru || isDosen);
+    $('#uEmailRow').hidden = role === 'admin';
   }
   $('#uRole').addEventListener('change', updateUserRoleFields);
   let userPhoto = { data: null, remove: false };
@@ -947,6 +981,7 @@
     $('#uUsername').value = u ? u.username : ''; $('#uUsername').disabled = !!u;
     $('#uPassword').value = ''; $('#uPassword').placeholder = u ? 'kosongkan bila tetap' : 'min. 4 karakter';
     $('#uJabatan').value = u ? (u.jabatan || '') : ''; $('#uInstansi').value = u ? (u.instansi || '') : '';
+    $('#uEmail').value = u ? (u.email || '') : '';
     $('#uNip').value = u ? (u.nip || '') : ''; $('#uNuptk').value = u ? (u.nuptk || '') : ''; $('#uNidn').value = u ? (u.nidn || '') : '';
     updateUserRoleFields();
     userPhoto = { data: null, remove: false };
@@ -979,6 +1014,7 @@
     const id = $('#userForm').dataset.editId;
     const payload = { nama: $('#uNama').value, role: $('#uRole').value, jabatan: $('#uJabatan').value, instansi: $('#uInstansi').value };
     const role = $('#uRole').value;
+    payload.email = role === 'admin' ? '' : $('#uEmail').value.trim();
     payload.nip = (role === 'guru' || role === 'observer' || role === 'dosen') ? $('#uNip').value : '';
     payload.nuptk = (role === 'guru' || role === 'observer') ? $('#uNuptk').value : '';
     payload.nidn = role === 'dosen' ? $('#uNidn').value : '';
@@ -1065,7 +1101,7 @@
   });
   $('#profileForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const payload = { nama: $('#accNameInput').value, jabatan: $('#accJabatan').value, instansi: $('#accInstansi').value };
+    const payload = { nama: $('#accNameInput').value, jabatan: $('#accJabatan').value, instansi: $('#accInstansi').value, email: $('#accEmail').value.trim() };
     if (accPhoto.data) payload.photo = accPhoto.data; else if (accPhoto.remove) payload.removePhoto = true;
     try {
       const d = await api('PUT', '/me', payload);

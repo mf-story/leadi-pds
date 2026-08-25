@@ -294,6 +294,8 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .user-item .u-main b { display: block; }
 .user-item .u-sub { font-size: .78rem; color: var(--muted); }
 .user-item .u-actions { display: flex; gap: .3rem; }
+.req-badge { display: inline-block; min-width: 20px; text-align: center; background: var(--danger); color: #fff; border-radius: 10px; padding: 0 .4rem; font-size: .75rem; font-weight: 700; }
+#requestsSection .user-item { border-left: 3px solid var(--accent); }
 
 /* ---------- Drawer ---------- */
 .drawer-overlay { position: fixed; inset: 0; z-index: 70; background: rgba(22, 52, 95, .45); }
