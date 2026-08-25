@@ -918,7 +918,7 @@ async function handleApi(req, res, url) {
       }
       const u = {
         id: uid('usr'), username: r.username, nama: r.nama, jabatan: r.jabatan || '',
-        instansi: r.instansi || '', role: 'observer', email: r.email || '', password: r.password,
+        instansi: r.instansi || '', role: r.role === 'guru' ? 'observer' : r.role, email: r.email || '', password: r.password,
         photoUrl: '', nip: r.nip || '', nuptk: r.nuptk || '', nidn: r.nidn || '', createdAt: new Date().toISOString()
       };
       DB.users.push(u);
