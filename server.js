@@ -698,6 +698,10 @@ async function handleApi(req, res, url) {
         const rid = String(body.refAtt);
         const a = ((c.plan && c.plan.attachments) || []).find(x => x.id === rid) || ((c.plan && c.plan.observerDocs) || []).find(x => x.id === rid);
         if (a) entry.ref = { id: a.id, name: a.name, url: a.url, type: a.type };
+        else {
+          const vl = ((c.plan && c.plan.videoLinks) || []).find(x => x.id === rid);
+          if (vl) entry.ref = { id: vl.id, name: vl.title || vl.url, url: vl.url, type: 'video-link' };
+        }
       }
       if (!Array.isArray(c.entries)) c.entries = [];
       c.entries.push(entry);

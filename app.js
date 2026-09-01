@@ -651,7 +651,8 @@
     // Tag perangkat perencanaan (dokumen & video) + unggahan observer — khusus Diskusi Perencanaan/Plan
     const planAtts = phase === 'plan' ? ((c.plan && c.plan.attachments) || []) : [];
     const obsDocs = phase === 'plan' ? ((c.plan && c.plan.observerDocs) || []) : [];
-    const tagSelect = (planAtts.length || obsDocs.length) ? `<select data-refatt class="tag-select"><option value="">📎 Tag perangkat/unggahan (opsional)…</option>${planAtts.map(a => `<option value="${esc(a.id)}">${isVideoFile(a.type, a.url) ? '🎬 ' : '📄 '}${esc(a.name)}</option>`).join('')}${obsDocs.map(a => `<option value="${esc(a.id)}">👤 ${esc(a.name)}${a.uploaderName ? ' — ' + esc(a.uploaderName) : ''}</option>`).join('')}</select>` : '';
+    const vidLinks = phase === 'plan' ? ((c.plan && c.plan.videoLinks) || []) : [];
+    const tagSelect = (planAtts.length || obsDocs.length || vidLinks.length) ? `<select data-refatt class="tag-select"><option value="">📎 Tag perangkat/unggahan (opsional)…</option>${planAtts.map(a => `<option value="${esc(a.id)}">${isVideoFile(a.type, a.url) ? '🎬 ' : '📄 '}${esc(a.name)}</option>`).join('')}${vidLinks.map(v => `<option value="${esc(v.id)}">🔗 ${esc(v.title || v.url)}</option>`).join('')}${obsDocs.map(a => `<option value="${esc(a.id)}">👤 ${esc(a.name)}${a.uploaderName ? ' — ' + esc(a.uploaderName) : ''}</option>`).join('')}</select>` : '';
     const form = contrib ? `<div class="entry-form" data-entryform="${phase}">
         ${phase === 'do' ? `<input type="text" data-fokus placeholder="Fokus observasi (opsional)">` : ''}
         <textarea data-text rows="2" placeholder="${ph}"></textarea>
@@ -663,7 +664,7 @@
   function entryHtml(e, c) {
     const mine = state.user && (e.userId === state.user.id || state.user.role === 'admin');
     const rLabel = cycleRoleLabel(c, e.userId, e.role); const rClass = cycleRoleClass(c, e.userId, e.role);
-    const refChip = e.ref ? `<div class="entry-ref"><span class="ref-chip" data-preview="${esc(e.ref.url)}" data-type="${esc(e.ref.type)}" data-name="${esc(e.ref.name)}" title="Buka ${esc(e.ref.name)}">${isVideoFile(e.ref.type, e.ref.url) ? '🎬' : '📎'} ${esc(e.ref.name)}</span></div>` : '';
+    const refChip = e.ref ? `<div class="entry-ref"><span class="ref-chip" data-preview="${esc(e.ref.url)}" data-type="${esc(e.ref.type)}" data-name="${esc(e.ref.name)}" title="Buka ${esc(e.ref.name)}">${e.ref.type === 'video-link' ? '🔗' : (isVideoFile(e.ref.type, e.ref.url) ? '🎬' : '📎')} ${esc(e.ref.name)}</span></div>` : '';
     return `<div class="entry ${e.phase}"><div class="entry-head"><span class="who">${esc(e.userName)}</span><span class="role-tag ${rClass}">${rLabel}</span><span class="when">${relTime(e.createdAt)}</span>${mine ? `<button class="del" data-rment="${e.id}" title="Hapus">🗑</button>` : ''}</div>${e.fokus ? `<div class="entry-fokus">🎯 ${esc(e.fokus)}</div>` : ''}<div class="entry-text">${esc(e.text)}</div>${refChip}</div>`;
   }
   function saveRow(phase) { return `<div class="save-row"><button type="button" class="btn btn-primary btn-sm" data-savephase="${phase}">💾 Simpan</button><span class="save-hint" data-savehint="${phase}" hidden>✓ Tersimpan</span></div>`; }
@@ -1254,6 +1255,7 @@
     $('#previewName').textContent = name || '';
     $('#previewModal').hidden = false;
     const ext = ((name || url).split('.').pop() || '').toLowerCase();
+    if (type === 'video-link') { const emb = ytEmbed(url); body.innerHTML = emb ? `<iframe src="${esc(emb)}" allow="autoplay; fullscreen" allowfullscreen></iframe>` : `<div class="preview-fallback">Tautan video eksternal.<br><a href="${esc(url)}" target="_blank" rel="noopener">Buka tautan ↗</a></div>`; return; }
     if (isImage(type)) { body.innerHTML = `<img src="${esc(url)}" alt="">`; return; }
     if (isPdf(type, url)) { body.innerHTML = `<iframe src="${esc(url)}"></iframe>`; return; }
     if (isVideoFile(type, url)) { body.innerHTML = `<video src="${esc(url)}" controls autoplay></video>`; return; }
