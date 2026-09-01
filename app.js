@@ -455,7 +455,7 @@
             ${(() => { const pEmbed = ((p.videoLinks || []).map(v => ytEmbed(v.url)).find(Boolean)); return pEmbed ? `<div class="video-embed" style="margin-top:.5rem"><iframe src="${pEmbed}" allowfullscreen loading="lazy"></iframe></div>` : ''; })()}
             ${videoLinksHtml(p.videoLinks, editable, 'plan.videoLinks')}
             ${editable ? `<label class="add-file-btn">🎬 Tambah video<input type="file" hidden accept="video/*" data-upload="plan.attachments"></label>
-              <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-ghost btn-sm" id="addVideoLink" data-vlfield="plan.videoLinks">+ Tautan</button></div>` : ''}
+              <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1 1 120px;min-width:110px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2 1 160px;min-width:140px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-primary btn-sm" id="addVideoLink" data-vlfield="plan.videoLinks" style="white-space:nowrap">➕ Simpan Tautan</button></div>` : ''}
           </div>
         </div>
         ${observerDocsPanel(c, 'plan.observerDocs')}
@@ -518,7 +518,7 @@
             ${videoThumbs(d.videos, editable)}
             ${videoLinksHtml(d.videoLinks, editable)}
             ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="pelaksanaan.videos"></label>
-              <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-ghost btn-sm" id="addVideoLink">+ Tautan</button></div>` : ''}
+              <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1 1 120px;min-width:110px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2 1 160px;min-width:140px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-primary btn-sm" id="addVideoLink" style="white-space:nowrap">➕ Simpan Tautan</button></div>` : ''}
             ${textField('Catatan', 'pelaksanaan.catatan', d.catatan, editable, 'Kejadian penting saat open class…', true)}
             ${editable ? saveRow('do') : ''}
             <div class="obs-block">
@@ -552,7 +552,7 @@
             ${rEmbed ? `<div class="video-embed"><iframe src="${rEmbed}" allowfullscreen loading="lazy"></iframe></div>` : ''}
             ${videoLinksHtml(rvl, editable, 'refleksi.videoLinks')}
             ${editable ? `<label class="add-file-btn">🎬 Unggah video<input type="file" hidden accept="video/*" data-upload="refleksi.videos"></label>
-              <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-ghost btn-sm" id="addVideoLink" data-vlfield="refleksi.videoLinks">+ Tautan</button></div>` : ''}
+              <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem;flex-wrap:wrap"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1 1 120px;min-width:110px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2 1 160px;min-width:140px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-primary btn-sm" id="addVideoLink" data-vlfield="refleksi.videoLinks" style="white-space:nowrap">➕ Simpan Tautan</button></div>` : ''}
             ${textField('Catatan', 'refleksi.catatan', s.catatan, editable, 'Kejadian penting saat refleksi…', true)}
             ${editable ? saveRow('see') : ''}
           </div>
