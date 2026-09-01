@@ -686,6 +686,11 @@ async function handleApi(req, res, url) {
         id: uid('ent'), phase, type: typeByPhase[phase], userId: me.id, userName: me.nama,
         role: me.role, fokus: str(body.fokus, 120), text, createdAt: Date.now()
       };
+      // Tag perangkat perencanaan (opsional): simpan cuplikan lampiran yang direferensikan
+      if (body.refAtt) {
+        const a = ((c.plan && c.plan.attachments) || []).find(x => x.id === String(body.refAtt));
+        if (a) entry.ref = { id: a.id, name: a.name, url: a.url, type: a.type };
+      }
       if (!Array.isArray(c.entries)) c.entries = [];
       c.entries.push(entry);
       c.updatedAt = Date.now();

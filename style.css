@@ -262,6 +262,10 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .entry-form { display: flex; flex-direction: column; gap: .4rem; margin-top: .7rem; padding-top: .7rem; border-top: 1px solid var(--line); }
 .entry-form textarea, .entry-form input { width: 100%; padding: .55rem .7rem; border: 1.5px solid var(--line); border-radius: 9px; font-family: inherit; font-size: .88rem; resize: vertical; }
 .entry-form .row { display: flex; gap: .5rem; justify-content: flex-end; }
+.tag-select { width: 100%; padding: .5rem .6rem; border: 1.5px solid var(--line); border-radius: 9px; font-family: inherit; font-size: .82rem; background: #fff; }
+.entry-ref { margin-top: .35rem; }
+.ref-chip { display: inline-flex; align-items: center; gap: .25rem; max-width: 100%; font-size: .76rem; font-weight: 600; color: var(--blue-dark); background: var(--blue-soft); border: 1px solid var(--line); border-radius: 999px; padding: .12rem .55rem; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ref-chip:hover { background: #e3ecfa; text-decoration: underline; }
 .role-tag { font-size: .68rem; font-weight: 700; padding: .08rem .45rem; border-radius: 6px; color: #fff; }
 .role-tag.guru { background: var(--plan); } .role-tag.dosen { background: var(--see); }
 .role-tag.observer { background: var(--do); } .role-tag.admin { background: var(--done); }
