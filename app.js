@@ -434,9 +434,9 @@
         <div class="panel">
           <div class="panel-head plan"><span class="ph-ic">📝</span> Rencana Pembelajaran${c.mapel ? ' — ' + esc(c.mapel) : ''}</div>
           <div class="panel-body">
-            ${dateTimeField('Rencana open class', 'plan.tanggalRencana', 'plan.jamRencana', p.tanggalRencana, p.jamRencana, editable)}
             ${richField('Capaian pembelajaran', 'plan.desain', p.desain, editable, 'Rumuskan capaian pembelajaran (CP) yang ditargetkan…')}
             ${richField('Tujuan pembelajaran', 'plan.tujuan', p.tujuan, editable, 'Rumuskan tujuan/kompetensi yang ingin dicapai…')}
+            ${dateTimeField('Rencana open class', 'plan.tanggalRencana', 'plan.jamRencana', p.tanggalRencana, p.jamRencana, editable)}
             ${editable ? saveRow('plan') : ''}
           </div>
         </div>
@@ -591,11 +591,13 @@
     if (editable) return `<div class="field-block"><label>${label}</label><textarea data-field="${key}" rows="${big ? 4 : 2}" placeholder="${esc(ph || '')}">${esc(val || '')}</textarea></div>`;
     return `<div class="field-block"><label>${label}</label><div class="readonly-text${val ? '' : ' empty'}">${val ? esc(val) : 'Belum diisi'}</div></div>`;
   }
-  // Editor teks kaya (mirip MS Word)
+  // Editor teks kaya (mirip MS Word) — default tampil read-only; toolbar muncul saat "Edit"
   function richField(label, key, val, editable, ph) {
     if (!editable) return `<div class="field-block"><label>${label}</label><div class="readonly-text${val ? '' : ' empty'}">${val ? richDisplay(val) : 'Belum diisi'}</div></div>`;
-    return `<div class="field-block"><label>${label}</label>
-      <div class="rte">
+    return `<div class="field-block rich-field">
+      <label>${label} <button type="button" class="rte-edit-btn" data-rteedit>✎ Edit</button></label>
+      <div class="readonly-text rich-view${val ? '' : ' empty'}" data-rteview>${val ? richDisplay(val) : 'Belum diisi'}</div>
+      <div class="rte" data-rtewrap hidden>
         <div class="rte-toolbar">
           <button type="button" class="rte-btn" data-cmd="bold" title="Tebal"><b>B</b></button>
           <button type="button" class="rte-btn" data-cmd="italic" title="Miring"><i>I</i></button>
@@ -716,6 +718,8 @@
     const savePhase = ev.target.closest('[data-savephase]');
     const sendEntry = ev.target.closest('[data-sendentry]');
     const addVl = ev.target.closest('#addVideoLink');
+    const rteEdit = ev.target.closest('[data-rteedit]');
+    if (rteEdit) { const fb = rteEdit.closest('.rich-field'); if (fb) { const view = fb.querySelector('[data-rteview]'); if (view) view.hidden = true; const wrap = fb.querySelector('[data-rtewrap]'); if (wrap) wrap.hidden = false; rteEdit.hidden = true; const area = fb.querySelector('.rte-area'); if (area) area.focus(); } return; }
     if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
     else if (rmVl) { const fld = rmVl.dataset.vlfield || 'pelaksanaan.videoLinks'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
     else if (rmVid) { if (confirm('Hapus video ini?')) { const fld = rmVid.dataset.vidfield || 'pelaksanaan.videos'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(v => v.id !== rmVid.dataset.rmvid); await savePhaseData(c, state.view); } }
