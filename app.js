@@ -441,13 +441,6 @@
           </div>
         </div>
         <div class="panel">
-          <div class="panel-head plan"><span class="ph-ic">🎬</span> Video</div>
-          <div class="panel-body">
-            ${videos.length ? `<div class="file-list">${videos.map(v => videoPlayerItem(v, editable)).join('')}</div>` : '<div class="file-empty">Belum ada video.</div>'}
-            ${editable ? `<label class="add-file-btn">🎬 Tambah video<input type="file" hidden accept="video/*" data-upload="plan.attachments"></label>` : ''}
-          </div>
-        </div>
-        <div class="panel">
           <div class="panel-head plan"><span class="ph-ic">💬</span> Diskusi Perencanaan</div>
           <div class="panel-body">${threadHtml(c, 'plan', can.contribute(c))}</div>
         </div>
@@ -458,6 +451,8 @@
           <div class="panel-body">
             ${docsHtml(docs, editable)}
             ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="plan.attachments"></label>` : ''}
+            ${videos.length ? `<div class="file-list" style="margin-top:.5rem">${videos.map(v => videoPlayerItem(v, editable)).join('')}</div>` : ''}
+            ${editable ? `<label class="add-file-btn">🎬 Tambah video<input type="file" hidden accept="video/*" data-upload="plan.attachments"></label>` : ''}
           </div>
         </div>
         ${observerDocsPanel(c, 'plan.observerDocs')}
