@@ -601,9 +601,9 @@ async function handleApi(req, res, url) {
       const list = DB.cycles.filter(c => canView(me, c)).map(summarizeCycle).sort((a, b) => b.updatedAt - a.updatedAt);
       return sendJSON(res, 200, { cycles: list });
     }
-    // create (guru & admin)
+    // create (semua guru/observer & admin — pembuat menjadi Guru Model siklus)
     if (!seg[1] && method === 'POST') {
-      if (me.role !== 'guru' && me.role !== 'admin') return sendJSON(res, 403, { error: 'Hanya Guru atau Admin yang dapat membuat siklus baru' });
+      if (!(me.role === 'guru' || me.role === 'observer' || me.role === 'admin')) return sendJSON(res, 403, { error: 'Hanya guru atau admin yang dapat membuat siklus baru' });
       const body = await readBody(req);
       const c = cleanCycle(body, null);
       if (!c.title) return sendJSON(res, 400, { error: 'Judul siklus wajib diisi' });

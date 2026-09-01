@@ -120,7 +120,7 @@
     contribute(c) { const u = state.user; if (!u || !c) return false; if (u.role === 'admin' || u.role === 'dosen') return true; return c.ownerId === u.id || (c.members || []).some(m => m.id === u.id); },
     delete(c) { const u = state.user; return u && (u.role === 'admin' || c.ownerId === u.id); },
     publish() { const u = state.user; return u && (u.role === 'admin' || u.role === 'dosen'); },
-    createCycle() { return state.user && (state.user.role === 'guru' || state.user.role === 'admin'); }
+    createCycle() { return state.user && (state.user.role === 'guru' || state.user.role === 'observer' || state.user.role === 'admin'); }
   };
 
   // ---------------- Auth ----------------
@@ -361,10 +361,23 @@
   function membersPanel(c) {
     const members = c.members || [];
     return `<div class="panel"><div class="panel-head"><span class="ph-ic">👥</span> Tim Kolaborasi</div><div class="panel-body">
-      <div class="members-row"><span class="member-badge"><span class="dot ${userRole(c.ownerId)}"></span>${esc(c.ownerName)} · Pemilik</span>${members.map(m => `<span class="member-badge"><span class="dot ${m.role}"></span>${esc(m.nama)}</span>`).join('')}</div>
+      <div class="members-row"><span class="member-badge"><span class="dot guru"></span>${esc(c.ownerName)} · Guru Model</span>${members.map(m => `<span class="member-badge"><span class="dot ${cycleRoleClass(c, m.id, m.role)}"></span>${esc(m.nama)} · ${cycleRoleLabel(c, m.id, m.role)}</span>`).join('')}</div>
     </div></div>`;
   }
   function userRole(id) { const u = state.directory.find(x => x.id === id); return u ? u.role : 'guru'; }
+  // Peran kontekstual dalam satu siklus: pembuat/pemilik = Guru Model, guru lain = Guru Observer
+  function cycleRoleLabel(c, userId, accountRole) {
+    if (c && userId && c.ownerId === userId) return 'Guru Model';
+    if (accountRole === 'dosen') return 'Dosen Pengawas';
+    if (accountRole === 'admin') return 'Admin Sistem';
+    return 'Guru Observer';
+  }
+  function cycleRoleClass(c, userId, accountRole) {
+    if (c && userId && c.ownerId === userId) return 'guru';
+    if (accountRole === 'dosen') return 'dosen';
+    if (accountRole === 'admin') return 'admin';
+    return 'observer';
+  }
 
   // Stepper Plan→Do→See→Selesai (menegaskan ketiga tab = satu siklus)
   function phaseStepper(c, currentView) {
@@ -633,7 +646,7 @@
 
   function threadHtml(c, phase, contrib) {
     const entries = (c.entries || []).filter(e => e.phase === phase);
-    const list = entries.length ? entries.map(entryHtml).join('') : `<div class="entry-empty">Belum ada catatan.</div>`;
+    const list = entries.length ? entries.map(e => entryHtml(e, c)).join('') : `<div class="entry-empty">Belum ada catatan.</div>`;
     const ph = { plan: 'Diskusikan rencana pelajaran…', do: 'Tambahkan catatan observasi…', see: 'Apa yang berjalan baik? Apa yang perlu diperbaiki?' }[phase];
     const form = contrib ? `<div class="entry-form" data-entryform="${phase}">
         ${phase === 'do' ? `<input type="text" data-fokus placeholder="Fokus observasi (opsional)">` : ''}
@@ -642,9 +655,10 @@
       </div>` : '';
     return `<div class="thread">${list}</div>${form}`;
   }
-  function entryHtml(e) {
+  function entryHtml(e, c) {
     const mine = state.user && (e.userId === state.user.id || state.user.role === 'admin');
-    return `<div class="entry ${e.phase}"><div class="entry-head"><span class="who">${esc(e.userName)}</span><span class="role-tag ${e.role}">${ROLE_LABEL[e.role] || e.role}</span><span class="when">${relTime(e.createdAt)}</span>${mine ? `<button class="del" data-rment="${e.id}" title="Hapus">🗑</button>` : ''}</div>${e.fokus ? `<div class="entry-fokus">🎯 ${esc(e.fokus)}</div>` : ''}<div class="entry-text">${esc(e.text)}</div></div>`;
+    const rLabel = cycleRoleLabel(c, e.userId, e.role); const rClass = cycleRoleClass(c, e.userId, e.role);
+    return `<div class="entry ${e.phase}"><div class="entry-head"><span class="who">${esc(e.userName)}</span><span class="role-tag ${rClass}">${rLabel}</span><span class="when">${relTime(e.createdAt)}</span>${mine ? `<button class="del" data-rment="${e.id}" title="Hapus">🗑</button>` : ''}</div>${e.fokus ? `<div class="entry-fokus">🎯 ${esc(e.fokus)}</div>` : ''}<div class="entry-text">${esc(e.text)}</div></div>`;
   }
   function saveRow(phase) { return `<div class="save-row"><button type="button" class="btn btn-primary btn-sm" data-savephase="${phase}">💾 Simpan</button><span class="save-hint" data-savehint="${phase}" hidden>✓ Tersimpan</span></div>`; }
 
@@ -1250,12 +1264,12 @@
   // ---------------- Laporan cetak / PDF ----------------
   function printCycleReport(c) {
     const p = c.plan || {}, d = c.pelaksanaan || {}, s = c.refleksi || {}, pb = c.praktikBaik || {};
-    const members = (c.members || []).map(m => `${esc(m.nama)} (${ROLE_LABEL[m.role] || m.role})`).join(', ') || '—';
+    const members = (c.members || []).map(m => `${esc(m.nama)} (${cycleRoleLabel(c, m.id, m.role)})`).join(', ') || '—';
     const field = (lbl, val, fmt) => `<div class="rep-field"><div class="lbl">${lbl}</div><div class="val${val ? '' : ' empty'}">${val ? (fmt ? fmt(val) : esc(val)) : 'Belum diisi'}</div></div>`;
     const fieldHtml = (lbl, val) => `<div class="rep-field"><div class="lbl">${lbl}</div><div class="val${val ? '' : ' empty'}">${val ? richDisplay(val) : 'Belum diisi'}</div></div>`;
     const filesList = (list, label) => (list && list.length) ? `<div class="rep-field"><div class="lbl">${label}</div><ul class="rep-list">${list.map(a => `<li>${esc(a.name)}${a.size ? ' (' + fmtSize(a.size) + ')' : ''}</li>`).join('')}</ul></div>` : '';
     const links = (d.videoLinks || []).length ? `<div class="rep-field"><div class="lbl">Tautan video</div><ul class="rep-list">${d.videoLinks.map(v => `<li>${esc(v.title || '')}${v.title ? ': ' : ''}${esc(v.url)}</li>`).join('')}</ul></div>` : '';
-    const entriesFor = (phase, cls) => { const es = (c.entries || []).filter(e => e.phase === phase); if (!es.length) return '<div class="val empty">Belum ada catatan.</div>'; return es.map(e => `<div class="rep-entry ${cls}"><div class="eh"><b>${esc(e.userName)}</b> · ${ROLE_LABEL[e.role] || e.role} · ${fmtDateTime(e.createdAt)}${e.fokus ? ' · Fokus: ' + esc(e.fokus) : ''}</div><div class="et">${esc(e.text)}</div></div>`).join(''); };
+    const entriesFor = (phase, cls) => { const es = (c.entries || []).filter(e => e.phase === phase); if (!es.length) return '<div class="val empty">Belum ada catatan.</div>'; return es.map(e => `<div class="rep-entry ${cls}"><div class="eh"><b>${esc(e.userName)}</b> · ${cycleRoleLabel(c, e.userId, e.role)} · ${fmtDateTime(e.createdAt)}${e.fokus ? ' · Fokus: ' + esc(e.fokus) : ''}</div><div class="et">${esc(e.text)}</div></div>`).join(''); };
     const html = `<div class="rep">
       <div class="rep-header"><div class="rep-brand">LeaDi-PDS</div><div class="rep-tag">Lesson Study Digital Platform berbasis Plan · Do · See</div></div>
       <div class="rep-title">${esc(c.title)}</div>
