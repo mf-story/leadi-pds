@@ -14,7 +14,7 @@
   const ROLE_LABEL = { admin: 'Admin Sistem', dosen: 'Dosen Pengawas', guru: 'Guru Model', observer: 'Guru Observer' };
   const STATUS_LABEL = { plan: 'Plan', do: 'Do', see: 'See', selesai: 'Selesai' };
 
-  const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard' };
+  const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', scopeFilter: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard' };
 
   // ---------------- API ----------------
   function token() { return localStorage.getItem(TOKEN_KEY) || ''; }
@@ -282,11 +282,20 @@
   function renderCycleList() {
     const q = ($('#cycleSearch').value || '').toLowerCase();
     let list = state.cycles;
+    if (state.scopeFilter === 'mine') list = list.filter(c => c.mine);
     if (state.statusFilter !== 'all') list = list.filter(c => c.status === state.statusFilter);
     if (q) list = list.filter(c => (c.title + ' ' + c.mapel + ' ' + c.sekolah + ' ' + c.kelas + ' ' + c.ownerName).toLowerCase().includes(q));
-    $('#cycleList').innerHTML = list.length ? list.map(cycleCard).join('') : emptyState('🔄', 'Belum ada siklus. Klik "+ Siklus Baru".');
+    const empty = state.scopeFilter === 'mine' ? emptyState('👤', 'Belum ada siklus yang melibatkan Anda.') : emptyState('🔄', 'Belum ada siklus. Klik "+ Siklus Baru".');
+    $('#cycleList').innerHTML = list.length ? list.map(cycleCard).join('') : empty;
   }
   $('#cycleSearch').addEventListener('input', renderCycleList);
+  const scopeFilterEl = $('#scopeFilter');
+  if (scopeFilterEl) scopeFilterEl.addEventListener('click', e => {
+    const chip = e.target.closest('[data-scope]'); if (!chip) return;
+    state.scopeFilter = chip.dataset.scope;
+    $$('.scope-chip', scopeFilterEl).forEach(b => b.classList.toggle('active', b === chip));
+    renderCycleList();
+  });
   // buka siklus dari kartu → jadikan aktif → ke Plan (atau fase saat ini)
   document.addEventListener('click', async e => {
     const open = e.target.closest('[data-open]'); if (!open) return;

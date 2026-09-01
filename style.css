@@ -153,6 +153,10 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 
 .filter-bar { display: flex; flex-direction: column; gap: .6rem; margin-bottom: 1rem; }
 .filter-bar input { width: 100%; }
+.scope-filter { display: inline-flex; gap: .3rem; background: #eef2f8; padding: .25rem; border-radius: 10px; align-self: flex-start; }
+.scope-chip { border: none; background: transparent; color: var(--muted); font-weight: 600; font-size: .84rem; padding: .4rem .85rem; border-radius: 8px; cursor: pointer; font-family: inherit; transition: .15s; }
+.scope-chip:hover { color: var(--blue-dark); }
+.scope-chip.active { background: #fff; color: var(--blue-dark); box-shadow: var(--shadow); }
 .chips { display: flex; gap: .4rem; flex-wrap: wrap; }
 .chip { border: 1.5px solid var(--line); background: #fff; color: var(--muted); border-radius: 20px; padding: .35rem .8rem; font-size: .82rem; font-weight: 600; cursor: pointer; }
 .chip.active { background: var(--accent); color: #fff; border-color: var(--accent); }

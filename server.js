@@ -604,7 +604,7 @@ async function handleApi(req, res, url) {
   if (seg[0] === 'cycles') {
     // list (ringkas)
     if (!seg[1] && method === 'GET') {
-      const list = DB.cycles.filter(c => canView(me, c)).map(summarizeCycle).sort((a, b) => b.updatedAt - a.updatedAt);
+      const list = DB.cycles.filter(c => canView(me, c)).map(c => Object.assign(summarizeCycle(c), { mine: c.ownerId === me.id || (c.memberIds || []).includes(me.id) })).sort((a, b) => b.updatedAt - a.updatedAt);
       return sendJSON(res, 200, { cycles: list });
     }
     // create (semua guru/observer & admin — pembuat menjadi Guru Model siklus)
