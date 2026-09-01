@@ -755,6 +755,16 @@
   }
   async function savePhaseData(c, phase) {
     collectFields(c);
+    // Auto-simpan tautan video yang sudah diketik tapi belum di-"+ Tautan"
+    const vlUrlEl = $('#vlUrl'), addVlBtn = $('#addVideoLink');
+    if (vlUrlEl && vlUrlEl.value.trim() && addVlBtn) {
+      const fld = addVlBtn.dataset.vlfield || 'pelaksanaan.videoLinks';
+      const [vg, vk] = fld.split('.');
+      const vt = ($('#vlTitle') || {}).value ? $('#vlTitle').value.trim() : '';
+      if (!c[vg]) c[vg] = {}; c[vg][vk] = c[vg][vk] || [];
+      c[vg][vk].push({ id: 'vl_' + Date.now(), title: vt, url: vlUrlEl.value.trim() });
+      vlUrlEl.value = ''; if ($('#vlTitle')) $('#vlTitle').value = '';
+    }
     const payload = buildCyclePayload(c);
     payload.plan.attachments = [...(c.plan.attachments || []), ...pendingUploads['plan.attachments']];
     payload.pelaksanaan.videos = [...(c.pelaksanaan.videos || []), ...pendingUploads['pelaksanaan.videos']];
@@ -784,6 +794,7 @@
     const [g, k] = field.split('.');
     collectFields(c); if (!c[g]) c[g] = {}; c[g][k] = c[g][k] || [];
     c[g][k].push({ id: 'vl_' + Date.now(), title, url });
+    if ($('#vlUrl')) $('#vlUrl').value = ''; if ($('#vlTitle')) $('#vlTitle').value = '';
     savePhaseData(c, state.view);
   }
   async function sendEntry_(c, phase) {
