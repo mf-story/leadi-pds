@@ -89,6 +89,7 @@ function loadDB() {
   if (!Array.isArray(DB.schools)) DB.schools = [];
   if (!Array.isArray(DB.institutions)) DB.institutions = [];
   if (!Array.isArray(DB.accountRequests)) DB.accountRequests = [];
+  if (!Array.isArray(DB.messages)) DB.messages = [];
 }
 function saveDB() {
   const tmp = DB_FILE + '.tmp';
@@ -858,6 +859,51 @@ async function handleApi(req, res, url) {
       DB.notifications.forEach(n => { if (n.userId === me.id && (!body.id || n.id === body.id)) n.read = true; });
       saveDB();
       return sendJSON(res, 200, { ok: true });
+    }
+  }
+
+  // ================= CHAT / PESAN LANGSUNG =================
+  if (seg[0] === 'messages') {
+    // ringan: hanya jumlah pesan belum dibaca (untuk badge)
+    if (seg[1] === 'unread' && method === 'GET') {
+      const unread = DB.messages.filter(m => m.toId === me.id && !m.read).length;
+      return sendJSON(res, 200, { unread });
+    }
+    // daftar kontak + ringkasan percakapan
+    if (!seg[1] && method === 'GET') {
+      const contacts = DB.users.filter(u => u.id !== me.id).map(u => {
+        const conv = DB.messages.filter(m => (m.fromId === me.id && m.toId === u.id) || (m.fromId === u.id && m.toId === me.id));
+        const last = conv.length ? conv[conv.length - 1] : null;
+        const unread = conv.filter(m => m.fromId === u.id && !m.read).length;
+        return { id: u.id, nama: u.nama, role: u.role, jabatan: u.jabatan || '', instansi: u.instansi || '', photoUrl: u.photoUrl || '', lastText: last ? last.text : '', lastAt: last ? last.createdAt : 0, unread };
+      }).sort((a, b) => (b.lastAt - a.lastAt) || a.nama.localeCompare(b.nama));
+      const unread = DB.messages.filter(m => m.toId === me.id && !m.read).length;
+      return sendJSON(res, 200, { contacts, unread });
+    }
+    // kirim pesan langsung
+    if (!seg[1] && method === 'POST') {
+      const body = await readBody(req);
+      const toId = String(body.toId || '');
+      const text = str(body.text, 2000);
+      const to = DB.users.find(u => u.id === toId);
+      if (!to || to.id === me.id) return sendJSON(res, 400, { error: 'Penerima tidak valid' });
+      if (!text) return sendJSON(res, 400, { error: 'Pesan tidak boleh kosong' });
+      const msg = { id: uid('msg'), fromId: me.id, toId, text, read: false, createdAt: Date.now() };
+      DB.messages.push(msg);
+      if (DB.messages.length > 5000) DB.messages = DB.messages.slice(-5000);
+      saveDB();
+      return sendJSON(res, 200, { message: msg });
+    }
+    // ambil percakapan dgn satu pengguna (+ tandai terbaca)
+    if (seg[1] && method === 'GET') {
+      const other = DB.users.find(u => u.id === seg[1]);
+      if (!other) return sendJSON(res, 404, { error: 'Pengguna tidak ditemukan' });
+      const conv = DB.messages.filter(m => (m.fromId === me.id && m.toId === other.id) || (m.fromId === other.id && m.toId === me.id));
+      let changed = false;
+      conv.forEach(m => { if (m.toId === me.id && !m.read) { m.read = true; changed = true; } });
+      if (changed) saveDB();
+      conv.sort((a, b) => a.createdAt - b.createdAt);
+      return sendJSON(res, 200, { messages: conv, contact: { id: other.id, nama: other.nama, role: other.role, photoUrl: other.photoUrl || '' } });
     }
   }
 

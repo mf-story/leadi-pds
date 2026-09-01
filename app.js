@@ -14,7 +14,7 @@
   const ROLE_LABEL = { admin: 'Admin Sistem', dosen: 'Dosen Pengawas', guru: 'Guru Model', observer: 'Guru Observer' };
   const STATUS_LABEL = { plan: 'Plan', do: 'Do', see: 'See', selesai: 'Selesai' };
 
-  const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', scopeFilter: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard' };
+  const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', scopeFilter: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard', chat: { openWith: null, openName: '', pollTimer: null, badgeTimer: null } };
 
   // ---------------- API ----------------
   function token() { return localStorage.getItem(TOKEN_KEY) || ''; }
@@ -30,6 +30,7 @@
   function handleExpired() {
     localStorage.removeItem(TOKEN_KEY); state.user = null;
     if (state.notifTimer) clearInterval(state.notifTimer);
+    teardownChat();
     $('#app').hidden = true; $('#loginScreen').hidden = false;
     toast('Sesi berakhir, silakan masuk kembali', 'err');
   }
@@ -174,6 +175,7 @@
     loadNotifications();
     if (state.notifTimer) clearInterval(state.notifTimer);
     state.notifTimer = setInterval(loadNotifications, 45000);
+    initChat();
   }
 
   function applyRoleUI() {
@@ -1229,7 +1231,7 @@
   async function doLogout() {
     try { await api('POST', '/logout'); } catch {}
     localStorage.removeItem(TOKEN_KEY); state.user = null;
-    if (state.notifTimer) clearInterval(state.notifTimer); stopEntriesPoll();
+    if (state.notifTimer) clearInterval(state.notifTimer); stopEntriesPoll(); teardownChat();
     $('#accountModal').hidden = true; $('#app').hidden = true; $('#loginScreen').hidden = false; $('#loginPass').value = '';
   }
 
@@ -1316,6 +1318,116 @@
     const cleanup = () => { rep.innerHTML = ''; window.removeEventListener('afterprint', cleanup); };
     window.addEventListener('afterprint', cleanup); window.print(); setTimeout(cleanup, 1000);
   }
+
+  // ---------------- Obrolan langsung (chat) ----------------
+  function initChat() {
+    const w = $('#chatWidget'); if (!w) return;
+    w.hidden = false;
+    $('#chatPanel').hidden = true;
+    state.chat.openWith = null;
+    refreshChatBadge();
+    if (state.chat.badgeTimer) clearInterval(state.chat.badgeTimer);
+    state.chat.badgeTimer = setInterval(refreshChatBadge, 20000);
+  }
+  function teardownChat() {
+    if (state.chat.badgeTimer) clearInterval(state.chat.badgeTimer);
+    if (state.chat.pollTimer) clearInterval(state.chat.pollTimer);
+    state.chat.badgeTimer = state.chat.pollTimer = null;
+    state.chat.openWith = null;
+    const w = $('#chatWidget'); if (w) w.hidden = true;
+    const p = $('#chatPanel'); if (p) p.hidden = true;
+  }
+  async function refreshChatBadge() {
+    try { const d = await api('GET', '/messages/unread'); setChatBadge(d.unread); } catch {}
+  }
+  function setChatBadge(n) {
+    const b = $('#chatFabBadge'); if (!b) return;
+    if (n > 0) { b.textContent = n > 99 ? '99+' : n; b.hidden = false; } else { b.hidden = true; }
+  }
+  function chatPanelOpen() { const p = $('#chatPanel'); return p && !p.hidden; }
+  function toggleChatPanel() {
+    const p = $('#chatPanel');
+    if (!p.hidden) { closeChatPanel(); return; }
+    p.hidden = false;
+    showContactsView();
+  }
+  function closeChatPanel() {
+    $('#chatPanel').hidden = true;
+    state.chat.openWith = null;
+    if (state.chat.pollTimer) { clearInterval(state.chat.pollTimer); state.chat.pollTimer = null; }
+  }
+  function showContactsView() {
+    state.chat.openWith = null;
+    $('#chatThread').hidden = true;
+    $('#chatContacts').hidden = false;
+    $('#chatBack').hidden = true;
+    $('#chatTitle').textContent = 'Obrolan';
+    if (state.chat.pollTimer) { clearInterval(state.chat.pollTimer); state.chat.pollTimer = null; }
+    loadChatContacts();
+    state.chat.pollTimer = setInterval(() => { if (!state.chat.openWith && chatPanelOpen()) loadChatContacts(true); }, 6000);
+  }
+  async function loadChatContacts(silent) {
+    try {
+      const d = await api('GET', '/messages');
+      setChatBadge(d.unread);
+      renderChatContacts(d.contacts || []);
+    } catch (ex) { if (!silent) $('#chatContacts').innerHTML = '<div class="chat-empty">Gagal memuat kontak.</div>'; }
+  }
+  function renderChatContacts(contacts) {
+    const el = $('#chatContacts');
+    el.innerHTML = contacts.length ? contacts.map(c => `<button type="button" class="chat-contact${c.unread ? ' has-unread' : ''}" data-chatopen="${esc(c.id)}" data-nama="${esc(c.nama)}">
+      <span class="chat-avatar">${c.photoUrl ? `<img src="${esc(c.photoUrl)}" alt="">` : esc(initials(c.nama))}</span>
+      <span class="chat-c-main"><span class="chat-c-name">${esc(c.nama)}</span><span class="chat-c-last">${c.lastText ? esc(c.lastText) : (ROLE_LABEL[c.role] || '')}</span></span>
+      ${c.unread ? `<span class="chat-c-badge">${c.unread}</span>` : ''}
+    </button>`).join('') : '<div class="chat-empty">Belum ada pengguna lain.</div>';
+  }
+  async function openChatThread(userId, nama) {
+    state.chat.openWith = userId; state.chat.openName = nama || '';
+    $('#chatContacts').hidden = true;
+    $('#chatThread').hidden = false;
+    $('#chatBack').hidden = false;
+    $('#chatTitle').textContent = nama || 'Obrolan';
+    $('#chatMessages').innerHTML = '<div class="chat-empty">Memuat…</div>';
+    await loadChatThread();
+    if (state.chat.pollTimer) { clearInterval(state.chat.pollTimer); state.chat.pollTimer = null; }
+    state.chat.pollTimer = setInterval(() => { if (state.chat.openWith && chatPanelOpen()) loadChatThread(true); }, 4000);
+    $('#chatText').focus();
+  }
+  async function loadChatThread(silent) {
+    const uid = state.chat.openWith; if (!uid) return;
+    try {
+      const d = await api('GET', '/messages/' + uid);
+      if (state.chat.openWith !== uid) return;
+      renderChatMessages(d.messages || []);
+      refreshChatBadge();
+    } catch (ex) { if (!silent) $('#chatMessages').innerHTML = '<div class="chat-empty">Gagal memuat percakapan.</div>'; }
+  }
+  function renderChatMessages(msgs) {
+    const el = $('#chatMessages');
+    const nearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 60;
+    el.innerHTML = msgs.length ? msgs.map(m => `<div class="chat-msg ${m.fromId === state.user.id ? 'me' : 'them'}"><span class="cm-text">${esc(m.text)}</span><span class="cm-time">${relTime(m.createdAt)}</span></div>`).join('') : '<div class="chat-empty">Belum ada pesan. Sapa duluan 👋</div>';
+    if (nearBottom || msgs.length) el.scrollTop = el.scrollHeight;
+  }
+  async function sendChatMessage() {
+    const input = $('#chatText'); const text = input.value.trim();
+    if (!text || !state.chat.openWith) return;
+    input.value = '';
+    try {
+      await api('POST', '/messages', { toId: state.chat.openWith, text });
+      await loadChatThread();
+    } catch (ex) { toast(ex.message, 'err'); input.value = text; }
+  }
+  (function wireChat() {
+    const fab = $('#chatFab'); if (!fab) return;
+    fab.addEventListener('click', toggleChatPanel);
+    $('#chatClose').addEventListener('click', closeChatPanel);
+    $('#chatBack').addEventListener('click', showContactsView);
+    $('#chatContacts').addEventListener('click', e => {
+      const it = e.target.closest('[data-chatopen]'); if (!it) return;
+      openChatThread(it.dataset.chatopen, it.dataset.nama);
+    });
+    $('#chatForm').addEventListener('submit', e => { e.preventDefault(); sendChatMessage(); });
+  })();
 
   // ---------------- Utils ----------------
   function fileToDataUrl(file) { return new Promise((resolve, reject) => { const r = new FileReader(); r.onload = () => resolve(r.result); r.onerror = reject; r.readAsDataURL(file); }); }

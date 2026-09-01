@@ -352,6 +352,25 @@
   </div>
 
   <div id="toast" class="toast" hidden></div>
+  <!-- ===== Obrolan langsung ===== -->
+  <div id="chatWidget" class="chat-widget" hidden>
+    <div id="chatPanel" class="chat-panel" hidden>
+      <div class="chat-header">
+        <button type="button" id="chatBack" class="chat-back" hidden>←</button>
+        <span id="chatTitle" class="chat-title">Obrolan</span>
+        <button type="button" id="chatClose" class="chat-close" title="Tutup">✕</button>
+      </div>
+      <div id="chatContacts" class="chat-contacts"></div>
+      <div id="chatThread" class="chat-thread" hidden>
+        <div id="chatMessages" class="chat-messages"></div>
+        <form id="chatForm" class="chat-input">
+          <input type="text" id="chatText" placeholder="Tulis pesan…" autocomplete="off" maxlength="2000" />
+          <button type="submit" class="chat-send" title="Kirim">➤</button>
+        </form>
+      </div>
+    </div>
+    <button type="button" id="chatFab" class="chat-fab" title="Obrolan langsung">💬<span id="chatFabBadge" class="chat-badge" hidden>0</span></button>
+  </div>
   <div id="uploadBar" class="upload-bar" hidden>
     <div class="upload-bar-label" id="uploadBarLabel">Mengunggah…</div>
     <div class="upload-bar-track"><div class="upload-bar-fill" id="uploadBarFill"></div></div>
