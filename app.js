@@ -645,9 +645,10 @@
     const entries = (c.entries || []).filter(e => e.phase === phase);
     const list = entries.length ? entries.map(e => entryHtml(e, c)).join('') : `<div class="entry-empty">Belum ada catatan.</div>`;
     const ph = { plan: 'Diskusikan rencana pelajaran…', do: 'Tambahkan catatan observasi…', see: 'Apa yang berjalan baik? Apa yang perlu diperbaiki?' }[phase];
-    // Tag perangkat perencanaan (dokumen & video) — khusus Diskusi Perencanaan/Plan
-    const planDocs = phase === 'plan' ? ((c.plan && c.plan.attachments) || []) : [];
-    const tagSelect = planDocs.length ? `<select data-refatt class="tag-select"><option value="">📎 Tag perangkat perencanaan (opsional)…</option>${planDocs.map(a => `<option value="${esc(a.id)}">${isVideoFile(a.type, a.url) ? '🎬 ' : '📄 '}${esc(a.name)}</option>`).join('')}</select>` : '';
+    // Tag perangkat perencanaan (dokumen & video) + unggahan observer — khusus Diskusi Perencanaan/Plan
+    const planAtts = phase === 'plan' ? ((c.plan && c.plan.attachments) || []) : [];
+    const obsDocs = phase === 'plan' ? ((c.plan && c.plan.observerDocs) || []) : [];
+    const tagSelect = (planAtts.length || obsDocs.length) ? `<select data-refatt class="tag-select"><option value="">📎 Tag perangkat/unggahan (opsional)…</option>${planAtts.map(a => `<option value="${esc(a.id)}">${isVideoFile(a.type, a.url) ? '🎬 ' : '📄 '}${esc(a.name)}</option>`).join('')}${obsDocs.map(a => `<option value="${esc(a.id)}">👤 ${esc(a.name)}${a.uploaderName ? ' — ' + esc(a.uploaderName) : ''}</option>`).join('')}</select>` : '';
     const form = contrib ? `<div class="entry-form" data-entryform="${phase}">
         ${phase === 'do' ? `<input type="text" data-fokus placeholder="Fokus observasi (opsional)">` : ''}
         <textarea data-text rows="2" placeholder="${ph}"></textarea>
