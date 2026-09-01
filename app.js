@@ -452,7 +452,10 @@
             ${docsHtml(docs, editable)}
             ${editable ? `<label class="add-file-btn">➕ Tambah dokumen<input type="file" hidden multiple accept=".doc,.docx,.xls,.xlsx,.pdf,.ppt,.pptx,image/*" data-upload="plan.attachments"></label>` : ''}
             ${videos.length ? `<div class="file-list" style="margin-top:.5rem">${videos.map(v => videoPlayerItem(v, editable)).join('')}</div>` : ''}
-            ${editable ? `<label class="add-file-btn">🎬 Tambah video<input type="file" hidden accept="video/*" data-upload="plan.attachments"></label>` : ''}
+            ${(() => { const pEmbed = ((p.videoLinks || []).map(v => ytEmbed(v.url)).find(Boolean)); return pEmbed ? `<div class="video-embed" style="margin-top:.5rem"><iframe src="${pEmbed}" allowfullscreen loading="lazy"></iframe></div>` : ''; })()}
+            ${videoLinksHtml(p.videoLinks, editable, 'plan.videoLinks')}
+            ${editable ? `<label class="add-file-btn">🎬 Tambah video<input type="file" hidden accept="video/*" data-upload="plan.attachments"></label>
+              <div class="row" style="display:flex;gap:.4rem;margin-top:.5rem"><input type="text" id="vlTitle" placeholder="Judul (opsional)" style="flex:1;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><input type="url" id="vlUrl" placeholder="Tautan YouTube/Drive…" style="flex:2;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:9px"><button type="button" class="btn btn-ghost btn-sm" id="addVideoLink" data-vlfield="plan.videoLinks">+ Tautan</button></div>` : ''}
           </div>
         </div>
         ${observerDocsPanel(c, 'plan.observerDocs')}
@@ -745,7 +748,7 @@
     return {
       title: c.title, mapel: c.mapel, materi: c.materi, kelas: c.kelas, sekolah: c.sekolah,
       memberIds: (c.members || []).map(m => m.id), status: c.status,
-      plan: { tujuan: c.plan.tujuan, desain: c.plan.desain, tanggalRencana: c.plan.tanggalRencana, jamRencana: c.plan.jamRencana, attachments: c.plan.attachments || [] },
+      plan: { tujuan: c.plan.tujuan, desain: c.plan.desain, tanggalRencana: c.plan.tanggalRencana, jamRencana: c.plan.jamRencana, videoLinks: c.plan.videoLinks || [], attachments: c.plan.attachments || [] },
       pelaksanaan: { tanggal: c.pelaksanaan.tanggal, jam: c.pelaksanaan.jam, catatan: c.pelaksanaan.catatan, videoLinks: c.pelaksanaan.videoLinks || [], videos: c.pelaksanaan.videos || [], observasiDocs: c.pelaksanaan.observasiDocs || [] },
       refleksi: { analisis: c.refleksi.analisis, rekomendasi: c.refleksi.rekomendasi, catatan: c.refleksi.catatan, videoLinks: c.refleksi.videoLinks || [], videos: c.refleksi.videos || [], perangkatDocs: c.refleksi.perangkatDocs || [] }
     };

@@ -208,6 +208,13 @@ function cleanCycle(body, existing) {
       desain: str((body.plan || {}).desain, 8000),
       tanggalRencana: /^\d{4}-\d{2}-\d{2}$/.test((body.plan || {}).tanggalRencana) ? body.plan.tanggalRencana : '',
       jamRencana: /^\d{2}:\d{2}$/.test((body.plan || {}).jamRencana) ? body.plan.jamRencana : '',
+      videoLinks: Array.isArray((body.plan || {}).videoLinks)
+        ? body.plan.videoLinks.slice(0, 20).map(v => ({
+            id: v && v.id ? String(v.id).slice(0, 60) : uid('vl'),
+            title: str(v && v.title, 160),
+            url: str(v && v.url, 600)
+          })).filter(v => v.url)
+        : (existing && existing.plan ? (existing.plan.videoLinks || []) : []),
       attachments: existing && existing.plan ? (existing.plan.attachments || []) : [],
       observerDocs: existing && existing.plan ? (existing.plan.observerDocs || []) : []
     },
