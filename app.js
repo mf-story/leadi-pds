@@ -14,7 +14,7 @@
   const ROLE_LABEL = { admin: 'Admin Sistem', dosen: 'Dosen Pengawas', guru: 'Guru Model', observer: 'Guru Observer' };
   const STATUS_LABEL = { plan: 'Plan', do: 'Do', see: 'See', selesai: 'Selesai' };
 
-  const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', scopeFilter: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard', chat: { openWith: null, openName: '', pollTimer: null, badgeTimer: null } };
+  const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', scopeFilter: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard', chat: { openWith: null, openName: '', pollTimer: null, badgeTimer: null, lastUnread: 0 } };
 
   // ---------------- API ----------------
   function token() { return localStorage.getItem(TOKEN_KEY) || ''; }
@@ -1325,9 +1325,10 @@
     w.hidden = false;
     $('#chatPanel').hidden = true;
     state.chat.openWith = null;
-    refreshChatBadge();
+    state.chat.lastUnread = 0;
+    refreshChatBadge(true);
     if (state.chat.badgeTimer) clearInterval(state.chat.badgeTimer);
-    state.chat.badgeTimer = setInterval(refreshChatBadge, 20000);
+    state.chat.badgeTimer = setInterval(refreshChatBadge, 10000);
   }
   function teardownChat() {
     if (state.chat.badgeTimer) clearInterval(state.chat.badgeTimer);
@@ -1337,8 +1338,17 @@
     const w = $('#chatWidget'); if (w) w.hidden = true;
     const p = $('#chatPanel'); if (p) p.hidden = true;
   }
-  async function refreshChatBadge() {
-    try { const d = await api('GET', '/messages/unread'); setChatBadge(d.unread); } catch {}
+  async function refreshChatBadge(silentInit) {
+    try {
+      const d = await api('GET', '/messages/unread');
+      setChatBadge(d.unread);
+      // Tanda pesan baru masuk: pulsa tombol + toast (saat panel tertutup)
+      if (!silentInit && d.unread > (state.chat.lastUnread || 0) && !chatPanelOpen()) {
+        const fab = $('#chatFab'); if (fab) { fab.classList.add('ring'); setTimeout(() => fab.classList.remove('ring'), 4000); }
+        toast('💬 Pesan baru masuk', 'ok');
+      }
+      state.chat.lastUnread = d.unread;
+    } catch {}
   }
   function setChatBadge(n) {
     const b = $('#chatFabBadge'); if (!b) return;
@@ -1361,10 +1371,11 @@
     $('#chatThread').hidden = true;
     $('#chatContacts').hidden = false;
     $('#chatBack').hidden = true;
+    const dot = $('#chatOnlineDot'); if (dot) dot.hidden = true;
     $('#chatTitle').textContent = 'Obrolan';
     if (state.chat.pollTimer) { clearInterval(state.chat.pollTimer); state.chat.pollTimer = null; }
     loadChatContacts();
-    state.chat.pollTimer = setInterval(() => { if (!state.chat.openWith && chatPanelOpen()) loadChatContacts(true); }, 6000);
+    state.chat.pollTimer = setInterval(() => { if (!state.chat.openWith && chatPanelOpen()) loadChatContacts(true); }, 4000);
   }
   async function loadChatContacts(silent) {
     try {
@@ -1376,8 +1387,8 @@
   function renderChatContacts(contacts) {
     const el = $('#chatContacts');
     el.innerHTML = contacts.length ? contacts.map(c => `<button type="button" class="chat-contact${c.unread ? ' has-unread' : ''}" data-chatopen="${esc(c.id)}" data-nama="${esc(c.nama)}">
-      <span class="chat-avatar">${c.photoUrl ? `<img src="${esc(c.photoUrl)}" alt="">` : esc(initials(c.nama))}</span>
-      <span class="chat-c-main"><span class="chat-c-name">${esc(c.nama)}</span><span class="chat-c-last">${c.lastText ? esc(c.lastText) : (ROLE_LABEL[c.role] || '')}</span></span>
+      <span class="chat-avatar">${c.photoUrl ? `<img src="${esc(c.photoUrl)}" alt="">` : esc(initials(c.nama))}${c.online ? '<span class="chat-online-dot" title="Online"></span>' : ''}</span>
+      <span class="chat-c-main"><span class="chat-c-name">${esc(c.nama)}</span><span class="chat-c-last">${c.online ? '<b class="chat-c-on">● Online</b> · ' : ''}${c.lastText ? esc(c.lastText) : (ROLE_LABEL[c.role] || '')}</span></span>
       ${c.unread ? `<span class="chat-c-badge">${c.unread}</span>` : ''}
     </button>`).join('') : '<div class="chat-empty">Belum ada pengguna lain.</div>';
   }
@@ -1390,7 +1401,7 @@
     $('#chatMessages').innerHTML = '<div class="chat-empty">Memuat…</div>';
     await loadChatThread();
     if (state.chat.pollTimer) { clearInterval(state.chat.pollTimer); state.chat.pollTimer = null; }
-    state.chat.pollTimer = setInterval(() => { if (state.chat.openWith && chatPanelOpen()) loadChatThread(true); }, 4000);
+    state.chat.pollTimer = setInterval(() => { if (state.chat.openWith && chatPanelOpen()) loadChatThread(true); }, 2000);
     $('#chatText').focus();
   }
   async function loadChatThread(silent) {
@@ -1399,6 +1410,7 @@
       const d = await api('GET', '/messages/' + uid);
       if (state.chat.openWith !== uid) return;
       renderChatMessages(d.messages || []);
+      const dot = $('#chatOnlineDot'); if (dot) dot.hidden = !(d.contact && d.contact.online);
       refreshChatBadge();
     } catch (ex) { if (!silent) $('#chatMessages').innerHTML = '<div class="chat-empty">Gagal memuat percakapan.</div>'; }
   }

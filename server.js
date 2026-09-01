@@ -102,6 +102,11 @@ function saveDB() {
 // ------------------------------------------------------------------
 const sessions = new Map();
 const SESSION_MS = 12 * 60 * 60 * 1000;
+// Kehadiran (online) — diperbarui tiap request terautentikasi, hilang saat server restart
+const lastSeen = new Map();
+const ONLINE_MS = 35 * 1000;
+function touchPresence(userId) { if (userId) lastSeen.set(userId, Date.now()); }
+function isOnline(userId) { return Date.now() - (lastSeen.get(userId) || 0) < ONLINE_MS; }
 function createSession(userId) {
   const token = crypto.randomBytes(24).toString('hex');
   sessions.set(token, { userId, exp: Date.now() + SESSION_MS });
@@ -476,6 +481,7 @@ async function handleApi(req, res, url) {
 
   const me = getSessionUser(req);
   if (!me) return sendJSON(res, 401, { error: 'Sesi berakhir, silakan masuk kembali' });
+  touchPresence(me.id);
 
   // --- LOGOUT ---
   if (seg[0] === 'logout' && method === 'POST') {
@@ -875,7 +881,7 @@ async function handleApi(req, res, url) {
         const conv = DB.messages.filter(m => (m.fromId === me.id && m.toId === u.id) || (m.fromId === u.id && m.toId === me.id));
         const last = conv.length ? conv[conv.length - 1] : null;
         const unread = conv.filter(m => m.fromId === u.id && !m.read).length;
-        return { id: u.id, nama: u.nama, role: u.role, jabatan: u.jabatan || '', instansi: u.instansi || '', photoUrl: u.photoUrl || '', lastText: last ? last.text : '', lastAt: last ? last.createdAt : 0, unread };
+        return { id: u.id, nama: u.nama, role: u.role, jabatan: u.jabatan || '', instansi: u.instansi || '', photoUrl: u.photoUrl || '', online: isOnline(u.id), lastText: last ? last.text : '', lastAt: last ? last.createdAt : 0, unread };
       }).sort((a, b) => (b.lastAt - a.lastAt) || a.nama.localeCompare(b.nama));
       const unread = DB.messages.filter(m => m.toId === me.id && !m.read).length;
       return sendJSON(res, 200, { contacts, unread });
@@ -903,7 +909,7 @@ async function handleApi(req, res, url) {
       conv.forEach(m => { if (m.toId === me.id && !m.read) { m.read = true; changed = true; } });
       if (changed) saveDB();
       conv.sort((a, b) => a.createdAt - b.createdAt);
-      return sendJSON(res, 200, { messages: conv, contact: { id: other.id, nama: other.nama, role: other.role, photoUrl: other.photoUrl || '' } });
+      return sendJSON(res, 200, { messages: conv, contact: { id: other.id, nama: other.nama, role: other.role, photoUrl: other.photoUrl || '', online: isOnline(other.id) } });
     }
   }
 
