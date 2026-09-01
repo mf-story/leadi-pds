@@ -166,9 +166,8 @@ function userById(id) { return DB.users.find(u => u.id === id) || null; }
 // Dosen & admin melihat semua siklus (pengawasan); Guru Model & Guru Observer
 // hanya siklus yang mereka miliki atau ikuti.
 function canView(user, c) {
-  if (!user || !c) return false;
-  if (user.role === 'admin' || user.role === 'dosen') return true;
-  return c.ownerId === user.id || (c.memberIds || []).includes(user.id);
+  // Semua pengguna terautentikasi dapat melihat semua siklus.
+  return !!(user && c);
 }
 // Yang boleh menyunting rancangan/fase: admin atau pemilik (Guru Model).
 function canEdit(user, c) {
@@ -177,10 +176,10 @@ function canEdit(user, c) {
   if (c.ownerId === user.id) return true;
   return false;
 }
-// Yang boleh berkontribusi (diskusi/observasi/refleksi): semua yang terlibat.
+// Yang boleh berkontribusi (komentar/observasi/unggah dokumen): hanya yang tertaut (pemilik/anggota) atau admin.
 function canContribute(user, c) {
   if (!user || !c) return false;
-  if (user.role === 'admin' || user.role === 'dosen') return true;
+  if (user.role === 'admin') return true;
   return c.ownerId === user.id || (c.memberIds || []).includes(user.id);
 }
 // Yang boleh menerbitkan Praktik Baik: Dosen Pengawas atau Admin.

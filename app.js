@@ -117,7 +117,7 @@
 
   const can = {
     edit(c) { const u = state.user; if (!u || !c) return false; if (u.role === 'admin') return true; return c.ownerId === u.id; },
-    contribute(c) { const u = state.user; if (!u || !c) return false; if (u.role === 'admin' || u.role === 'dosen') return true; return c.ownerId === u.id || (c.members || []).some(m => m.id === u.id); },
+    contribute(c) { const u = state.user; if (!u || !c) return false; if (u.role === 'admin') return true; return c.ownerId === u.id || (c.members || []).some(m => m.id === u.id); },
     delete(c) { const u = state.user; return u && (u.role === 'admin' || c.ownerId === u.id); },
     publish() { const u = state.user; return u && (u.role === 'admin' || u.role === 'dosen'); },
     createCycle() { return state.user && (state.user.role === 'guru' || state.user.role === 'observer' || state.user.role === 'admin'); }
