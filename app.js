@@ -852,15 +852,15 @@
     // Kolom catatan & unggahan hanya utk siklus BARU (saat ubah info, isi diedit di tab Plan/Do)
     $('#cycleCreateExtras').hidden = editing;
     $('#cCapaianArea').innerHTML = ''; $('#cTujuanArea').innerHTML = ''; cycleDocs = []; cycleVids = [];
-    $('#cDocInput').value = ''; $('#cVidInput').value = ''; renderCreateFiles();
+    renderCreateFiles();
     $('#cycleError').hidden = true; $('#cycleModal').hidden = false;
   }
   // Berkas terpilih saat membuat siklus baru (objek File asli, diunggah biner setelah siklus dibuat)
   let cycleDocs = [], cycleVids = [];
   function renderCreateFiles() {
     const chip = (f, i, kind) => `<div class="file-item"><span class="ic">${attIcon({ type: f.type, url: f.name })}</span><span class="nm">${esc(f.name)}</span><span class="sz">${fmtSize(f.size)}</span><button type="button" class="x" data-rmcfile="${kind}:${i}">✕</button></div>`;
-    $('#cDocList').innerHTML = cycleDocs.map((f, i) => chip(f, i, 'doc')).join('');
-    $('#cVidList').innerHTML = cycleVids.map((f, i) => chip(f, i, 'vid')).join('');
+    const dl = $('#cDocList'); if (dl) dl.innerHTML = cycleDocs.map((f, i) => chip(f, i, 'doc')).join('');
+    const vl = $('#cVidList'); if (vl) vl.innerHTML = cycleVids.map((f, i) => chip(f, i, 'vid')).join('');
   }
   async function addCreateFiles(files, arr) {
     files = Array.from(files);
@@ -870,8 +870,8 @@
     }
     renderCreateFiles();
   }
-  $('#cDocInput').addEventListener('change', async e => { await addCreateFiles(e.target.files, cycleDocs); e.target.value = ''; });
-  $('#cVidInput').addEventListener('change', async e => { await addCreateFiles(e.target.files, cycleVids); e.target.value = ''; });
+  { const di = $('#cDocInput'); if (di) di.addEventListener('change', async e => { await addCreateFiles(e.target.files, cycleDocs); e.target.value = ''; }); }
+  { const vi = $('#cVidInput'); if (vi) vi.addEventListener('change', async e => { await addCreateFiles(e.target.files, cycleVids); e.target.value = ''; }); }
   $('#cycleCreateExtras').addEventListener('click', e => {
     const b = e.target.closest('[data-rmcfile]'); if (!b) return;
     const [kind, i] = b.dataset.rmcfile.split(':');
