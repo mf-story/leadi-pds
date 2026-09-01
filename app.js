@@ -645,9 +645,9 @@
     const entries = (c.entries || []).filter(e => e.phase === phase);
     const list = entries.length ? entries.map(e => entryHtml(e, c)).join('') : `<div class="entry-empty">Belum ada catatan.</div>`;
     const ph = { plan: 'Diskusikan rencana pelajaran…', do: 'Tambahkan catatan observasi…', see: 'Apa yang berjalan baik? Apa yang perlu diperbaiki?' }[phase];
-    // Tag perangkat perencanaan (khusus Diskusi Perencanaan/Plan)
-    const planDocs = phase === 'plan' ? ((c.plan && c.plan.attachments) || []).filter(a => !isVideoFile(a.type, a.url)) : [];
-    const tagSelect = planDocs.length ? `<select data-refatt class="tag-select"><option value="">📎 Tag perangkat perencanaan (opsional)…</option>${planDocs.map(a => `<option value="${esc(a.id)}">${esc(a.name)}</option>`).join('')}</select>` : '';
+    // Tag perangkat perencanaan (dokumen & video) — khusus Diskusi Perencanaan/Plan
+    const planDocs = phase === 'plan' ? ((c.plan && c.plan.attachments) || []) : [];
+    const tagSelect = planDocs.length ? `<select data-refatt class="tag-select"><option value="">📎 Tag perangkat perencanaan (opsional)…</option>${planDocs.map(a => `<option value="${esc(a.id)}">${isVideoFile(a.type, a.url) ? '🎬 ' : '📄 '}${esc(a.name)}</option>`).join('')}</select>` : '';
     const form = contrib ? `<div class="entry-form" data-entryform="${phase}">
         ${phase === 'do' ? `<input type="text" data-fokus placeholder="Fokus observasi (opsional)">` : ''}
         <textarea data-text rows="2" placeholder="${ph}"></textarea>
@@ -659,7 +659,7 @@
   function entryHtml(e, c) {
     const mine = state.user && (e.userId === state.user.id || state.user.role === 'admin');
     const rLabel = cycleRoleLabel(c, e.userId, e.role); const rClass = cycleRoleClass(c, e.userId, e.role);
-    const refChip = e.ref ? `<div class="entry-ref"><span class="ref-chip" data-preview="${esc(e.ref.url)}" data-type="${esc(e.ref.type)}" data-name="${esc(e.ref.name)}" title="Buka ${esc(e.ref.name)}">📎 ${esc(e.ref.name)}</span></div>` : '';
+    const refChip = e.ref ? `<div class="entry-ref"><span class="ref-chip" data-preview="${esc(e.ref.url)}" data-type="${esc(e.ref.type)}" data-name="${esc(e.ref.name)}" title="Buka ${esc(e.ref.name)}">${isVideoFile(e.ref.type, e.ref.url) ? '🎬' : '📎'} ${esc(e.ref.name)}</span></div>` : '';
     return `<div class="entry ${e.phase}"><div class="entry-head"><span class="who">${esc(e.userName)}</span><span class="role-tag ${rClass}">${rLabel}</span><span class="when">${relTime(e.createdAt)}</span>${mine ? `<button class="del" data-rment="${e.id}" title="Hapus">🗑</button>` : ''}</div>${e.fokus ? `<div class="entry-fokus">🎯 ${esc(e.fokus)}</div>` : ''}<div class="entry-text">${esc(e.text)}</div>${refChip}</div>`;
   }
   function saveRow(phase) { return `<div class="save-row"><button type="button" class="btn btn-primary btn-sm" data-savephase="${phase}">💾 Simpan</button><span class="save-hint" data-savehint="${phase}" hidden>✓ Tersimpan</span></div>`; }
