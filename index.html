@@ -14,17 +14,25 @@
 
   <!-- ========================= LOGIN ========================= -->
   <section id="loginScreen" class="login-screen">
+    <div class="login-bg" aria-hidden="true">
+      <span class="blob blob-1"></span>
+      <span class="blob blob-2"></span>
+      <span class="blob blob-3"></span>
+      <span class="ribbon ribbon-1"></span>
+      <span class="ribbon ribbon-2"></span>
+    </div>
     <div class="login-card">
-      <div class="login-logo"><img src="icon.svg" alt="LeaDi-PDS" width="72" height="72" /></div>
-      <h1 class="login-title">LeaDi-PDS</h1>
-      <p class="login-sub">Lesson Study Digital Platform<br />berbasis <b>Plan&nbsp;·&nbsp;Do&nbsp;·&nbsp;See</b></p>
+      <div class="login-brand"><img src="icon.svg" alt="" width="34" height="34" /><span>LeaDi-PDS</span></div>
+      <h1 class="login-title">Masuk</h1>
+      <p class="login-sub">Lesson Study Digital Platform · <b>Plan&nbsp;·&nbsp;Do&nbsp;·&nbsp;See</b></p>
       <form id="loginForm" class="login-form">
         <label>Username<input type="text" id="loginUser" autocomplete="username" required placeholder="mis. guru" /></label>
         <label>Kata sandi<input type="password" id="loginPass" autocomplete="current-password" required placeholder="••••••" /></label>
         <p id="loginError" class="form-error" hidden></p>
-        <button type="submit" class="btn btn-primary btn-block">Masuk</button>
+        <button type="submit" class="btn-signin">Sign in</button>
       </form>
-      <button type="button" id="showRegisterBtn" class="btn btn-ghost btn-block" style="margin-top:.55rem">✍️ Ajukan Akun Baru</button>
+      <div class="login-or"><span>atau</span></div>
+      <p class="login-alt">Belum punya akun? <button type="button" id="showRegisterBtn" class="link-btn">Ajukan gratis</button></p>
     </div>
     <p class="login-foot">Penguatan praktik pembelajaran berbasis bukti di Sekolah</p>
   </section>
