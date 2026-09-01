@@ -309,6 +309,15 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .member-badge .dot { width: 8px; height: 8px; border-radius: 50%; }
 .dot.guru { background: var(--plan); } .dot.dosen { background: var(--see); }
 .dot.observer { background: var(--do); } .dot.admin { background: var(--done); }
+.join-reqs { margin-top: .7rem; border-top: 1px dashed var(--line); padding-top: .6rem; }
+.jr-title { font-size: .82rem; font-weight: 700; color: var(--blue-dark); margin-bottom: .45rem; }
+.jr-item { display: flex; align-items: center; justify-content: space-between; gap: .5rem; padding: .4rem .55rem; background: #f6f9fd; border: 1px solid var(--line); border-radius: 9px; margin-bottom: .4rem; }
+.jr-name { font-size: .84rem; color: var(--ink); font-weight: 600; }
+.jr-name small { font-weight: 400; color: var(--muted); }
+.jr-acts { display: flex; gap: .35rem; flex: 0 0 auto; }
+.join-btn { margin-top: .7rem; }
+.join-hint { margin-top: .7rem; font-size: .82rem; color: var(--muted); background: #fff7e6; border: 1px solid #ffe4a3; border-radius: 8px; padding: .45rem .6rem; }
+.badge-join { font-size: .72rem; background: #e6f0ff; color: var(--accent); padding: .12rem .5rem; border-radius: 20px; font-weight: 700; }
 
 /* empty phase prompt */
 .phase-empty { text-align: center; color: var(--muted); padding: 3rem 1rem; }

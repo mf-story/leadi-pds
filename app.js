@@ -275,7 +275,7 @@
   }
   function cycleCard(c) {
     return `<div class="cycle-card st-${c.status}" data-open="${c.id}">
-      <div class="cycle-foot" style="margin:0"><span class="status-pill ${c.status}">${STATUS_LABEL[c.status]}</span>${c.published ? '<span class="badge-pub">🏆 Praktik Baik</span>' : ''}</div>
+      <div class="cycle-foot" style="margin:0"><span class="status-pill ${c.status}">${STATUS_LABEL[c.status]}</span>${c.pendingJoin && c.ownerId === state.user.id ? `<span class="badge-join">📥 ${c.pendingJoin} permintaan</span>` : ''}${c.published ? '<span class="badge-pub">🏆 Praktik Baik</span>' : ''}</div>
       <h4>${esc(c.title)}</h4>
       <div class="cycle-meta">${c.mapel ? `<span>📚 ${esc(c.mapel)}</span>` : ''}${c.materi ? `<span>📖 ${esc(c.materi)}</span>` : ''}${c.kelas ? `<span>🎓 ${esc(c.kelas)}</span>` : ''}${c.sekolah ? `<span>🏫 ${esc(c.sekolah)}</span>` : ''}</div>
       <div class="cycle-foot"><span class="tag owner">👤 ${esc(c.ownerName || '')}</span><span class="muted" style="font-size:.75rem">👥 ${c.memberCount} · 💬 ${c.entryCount}</span></div>
@@ -371,8 +371,25 @@
   }
   function membersPanel(c) {
     const members = c.members || [];
+    const meId = state.user.id;
+    const isOwner = c.ownerId === meId;
+    const isMember = members.some(m => m.id === meId);
+    const manage = can.edit(c);
+    const pending = (c.joinRequests || []).filter(r => r.status === 'pending');
+    const canRequest = !isOwner && !isMember && (state.user.role === 'guru' || state.user.role === 'observer');
+    const alreadyPending = (c.joinRequests || []).some(r => r.userId === meId && r.status === 'pending');
+    let extra = '';
+    if (manage && pending.length) {
+      extra += `<div class="join-reqs"><div class="jr-title">📥 Permintaan bergabung (${pending.length})</div>${pending.map(r => `<div class="jr-item"><span class="jr-name">${esc(r.userName)}${r.message ? `<small> — ${esc(r.message)}</small>` : ''}</span><span class="jr-acts"><button type="button" class="btn btn-primary btn-sm" data-jrapprove="${esc(r.id)}">Terima</button><button type="button" class="btn btn-danger btn-sm" data-jrreject="${esc(r.id)}">Tolak</button></span></div>`).join('')}</div>`;
+    }
+    if (canRequest) {
+      extra += alreadyPending
+        ? `<div class="join-hint">⏳ Permintaan Anda menunggu keputusan guru model.</div>`
+        : `<button type="button" class="btn btn-ghost btn-sm join-btn" data-joinreq="${esc(c.id)}">🙋 Minta jadi observer</button>`;
+    }
     return `<div class="panel"><div class="panel-head"><span class="ph-ic">👥</span> Tim Kolaborasi</div><div class="panel-body">
       <div class="members-row"><span class="member-badge"><span class="dot guru"></span>${esc(c.ownerName)} · Guru Model</span>${members.map(m => `<span class="member-badge"><span class="dot ${cycleRoleClass(c, m.id, m.role)}"></span>${esc(m.nama)} · ${cycleRoleLabel(c, m.id, m.role)}</span>`).join('')}</div>
+      ${extra}
     </div></div>`;
   }
   function userRole(id) { const u = state.directory.find(x => x.id === id); return u ? u.role : 'guru'; }
@@ -735,6 +752,9 @@
     const sendEntry = ev.target.closest('[data-sendentry]');
     const addVl = ev.target.closest('#addVideoLink');
     const rteEdit = ev.target.closest('[data-rteedit]');
+    const joinReq = ev.target.closest('[data-joinreq]');
+    const jrApprove = ev.target.closest('[data-jrapprove]');
+    const jrReject = ev.target.closest('[data-jrreject]');
     if (rteEdit) { const fb = rteEdit.closest('.rich-field'); if (fb) { const view = fb.querySelector('[data-rteview]'); if (view) view.hidden = true; const wrap = fb.querySelector('[data-rtewrap]'); if (wrap) wrap.hidden = false; rteEdit.hidden = true; const area = fb.querySelector('.rte-area'); if (area) area.focus(); } return; }
     if (rmAtt) { c.plan.attachments = (c.plan.attachments || []).filter(a => a.id !== rmAtt.dataset.rmatt); await savePhaseData(c, state.view); }
     else if (rmVl) { const fld = rmVl.dataset.vlfield || 'pelaksanaan.videoLinks'; const [g, k] = fld.split('.'); if (!c[g]) c[g] = {}; c[g][k] = (c[g][k] || []).filter(v => v.id !== rmVl.dataset.rmvl); await savePhaseData(c, state.view); }
@@ -746,8 +766,28 @@
     else if (savePhase) { await savePhaseData(c, savePhase.dataset.savephase); }
     else if (sendEntry) { await sendEntry_(c, sendEntry.dataset.sendentry); }
     else if (addVl) { addVideoLink(c, addVl.dataset.vlfield); }
+    else if (joinReq) { await requestJoinCycle(c); }
+    else if (jrApprove) { await decideJoinRequest(c, jrApprove.dataset.jrapprove, 'approve'); }
+    else if (jrReject) { await decideJoinRequest(c, jrReject.dataset.jrreject, 'reject'); }
   }
   ['plan', 'do', 'see'].forEach(v => { const el = document.getElementById(v + 'Body'); if (el) el.addEventListener('click', onPhaseBodyClick); });
+  async function requestJoinCycle(c) {
+    try {
+      await api('POST', '/cycles/' + c.id + '/join-request', {});
+      const d = await api('GET', '/cycles/' + c.id); state.current = d.cycle;
+      await renderPhaseView(state.view);
+      toast('Permintaan terkirim. Menunggu keputusan guru model.', 'ok');
+    } catch (ex) { toast(ex.message, 'err'); }
+  }
+  async function decideJoinRequest(c, reqId, action) {
+    try {
+      const d = await api('POST', '/cycles/' + c.id + '/join-requests/' + reqId + '/' + action);
+      state.current = d.cycle;
+      await loadCycles();
+      await renderPhaseView(state.view);
+      toast(action === 'approve' ? 'Permintaan diterima' : 'Permintaan ditolak', 'ok');
+    } catch (ex) { toast(ex.message, 'err'); }
+  }
   function collectFields(c) {
     $$('#view-' + state.view + ' [data-field]').forEach(el => {
       const [group, key] = el.dataset.field.split('.'); if (!c[group]) c[group] = {}; c[group][key] = el.value;

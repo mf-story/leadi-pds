@@ -258,6 +258,7 @@ function cleanCycle(body, existing) {
       published: false, ringkasan: '', tags: [], publishedAt: null
     },
     entries: existing ? (existing.entries || []) : [],
+    joinRequests: existing ? (existing.joinRequests || []) : [],
     createdBy: existing ? existing.createdBy : null,
     createdAt: existing ? existing.createdAt : Date.now(),
     updatedAt: Date.now()
@@ -686,6 +687,52 @@ async function handleApi(req, res, url) {
       saveDB();
       return sendJSON(res, 200, { cycle: enrichCycle(c) });
     }
+    // === Permintaan bergabung sebagai observer ===
+    // guru/observer yang belum tergabung mengajukan diri
+    if (seg[1] && seg[2] === 'join-request' && !seg[3] && method === 'POST') {
+      const c = DB.cycles.find(x => x.id === seg[1]);
+      if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
+      if (c.ownerId === me.id || (c.memberIds || []).includes(me.id)) return sendJSON(res, 400, { error: 'Anda sudah tergabung dalam siklus ini' });
+      if (isAdmin(me)) return sendJSON(res, 400, { error: 'Admin tidak perlu mengajukan diri' });
+      if (!Array.isArray(c.joinRequests)) c.joinRequests = [];
+      if (c.joinRequests.some(r => r.userId === me.id && r.status === 'pending')) return sendJSON(res, 400, { error: 'Permintaan Anda masih menunggu keputusan guru model' });
+      const body = await readBody(req);
+      const reqObj = { id: uid('jr'), userId: me.id, userName: me.nama, role: me.role, message: str(body.message, 300), status: 'pending', createdAt: Date.now() };
+      c.joinRequests.push(reqObj);
+      c.updatedAt = Date.now();
+      notify([c.ownerId], me, c, `${me.nama} ingin bergabung sebagai observer pada siklus "${c.title}".`);
+      saveDB();
+      return sendJSON(res, 200, { request: reqObj });
+    }
+    // guru model / admin menerima permintaan
+    if (seg[1] && seg[2] === 'join-requests' && seg[3] && seg[4] === 'approve' && method === 'POST') {
+      const c = DB.cycles.find(x => x.id === seg[1]);
+      if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
+      if (!canEdit(me, c)) return sendJSON(res, 403, { error: 'Hanya guru model atau admin yang dapat memproses permintaan' });
+      const r = (c.joinRequests || []).find(x => x.id === seg[3]);
+      if (!r) return sendJSON(res, 404, { error: 'Permintaan tidak ditemukan' });
+      r.status = 'approved'; r.decidedAt = Date.now();
+      if (!Array.isArray(c.memberIds)) c.memberIds = [];
+      if (!c.memberIds.includes(r.userId)) c.memberIds.push(r.userId);
+      c.updatedAt = Date.now();
+      notify([r.userId], me, c, `Permintaan Anda bergabung pada siklus "${c.title}" diterima.`);
+      saveDB();
+      return sendJSON(res, 200, { cycle: enrichCycle(c) });
+    }
+    // guru model / admin menolak permintaan
+    if (seg[1] && seg[2] === 'join-requests' && seg[3] && seg[4] === 'reject' && method === 'POST') {
+      const c = DB.cycles.find(x => x.id === seg[1]);
+      if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
+      if (!canEdit(me, c)) return sendJSON(res, 403, { error: 'Hanya guru model atau admin yang dapat memproses permintaan' });
+      const r = (c.joinRequests || []).find(x => x.id === seg[3]);
+      if (!r) return sendJSON(res, 404, { error: 'Permintaan tidak ditemukan' });
+      r.status = 'rejected'; r.decidedAt = Date.now();
+      c.updatedAt = Date.now();
+      notify([r.userId], me, c, `Permintaan Anda bergabung pada siklus "${c.title}" belum dapat diterima.`);
+      saveDB();
+      return sendJSON(res, 200, { cycle: enrichCycle(c) });
+    }
+
     // tambah kontribusi (diskusi/observasi/refleksi)
     if (seg[1] && seg[2] === 'entries' && !seg[3] && method === 'POST') {
       const c = DB.cycles.find(x => x.id === seg[1]);
@@ -1024,6 +1071,7 @@ function summarizeCycle(c) {
     memberCount: (c.memberIds || []).length,
     entryCount: (c.entries || []).length,
     published: !!(c.praktikBaik && c.praktikBaik.published),
+    pendingJoin: (c.joinRequests || []).filter(r => r.status === 'pending').length,
     tanggalRencana: (c.plan && c.plan.tanggalRencana) || '',
     updatedAt: c.updatedAt, createdAt: c.createdAt
   };
