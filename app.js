@@ -1057,7 +1057,7 @@
     const kind = state.mediaKind || 'all';
     let list = state._media || [];
     if (kind !== 'all') list = list.filter(m => m.kind === kind);
-    if (q) list = list.filter(m => (m.name + ' ' + m.cycleTitle).toLowerCase().includes(q));
+    if (q) list = list.filter(m => (m.name + ' ' + m.cycleTitle + ' ' + (m.owner || '')).toLowerCase().includes(q));
     if (!list.length) { $('#mediaList').innerHTML = emptyState('📁', 'Belum ada dokumen atau video.'); return; }
     $('#mediaList').innerHTML = list.map(m => {
       const dl = m.kind === 'link' ? '' : `<a class="file-dl" href="${esc(m.url)}" download="${esc(m.name)}" title="Unduh">⬇️</a>`;
