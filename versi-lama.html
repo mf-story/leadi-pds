@@ -1,0 +1,293 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LeaDi-PDS — Tampilan Versi Lama (mockup statis)</title>
+<style>
+  /* ====== Gaya "versi lama": polos, minim warna, tata letak biasa ====== */
+  :root{
+    --ink:#222; --muted:#666; --line:#ccc; --line-soft:#e2e2e2;
+    --bg:#f4f4f4; --box:#fff; --head:#ededed;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;font-family:Arial,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);line-height:1.5;font-size:14px;}
+  h1,h2,h3,h4{margin:0 0 .4rem;line-height:1.3;font-weight:bold;}
+  a{color:#333;}
+  .muted{color:var(--muted);font-size:.88rem;}
+
+  /* App bar polos */
+  .appbar{display:flex;align-items:center;justify-content:space-between;
+    padding:.6rem 1rem;background:var(--head);color:#222;border-bottom:1px solid var(--line);}
+  .appbar .brand{display:flex;align-items:center;gap:.5rem;font-weight:bold;}
+  .appbar .brand .logo{width:26px;height:26px;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.8rem;}
+  .appbar .user{width:32px;height:32px;border-radius:50%;border:1px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;font-size:.78rem;font-weight:bold;}
+
+  /* Menu biasa (baris tab sederhana) */
+  .topnav{display:flex;gap:0;background:#fff;border-bottom:1px solid var(--line);padding:0 .5rem;overflow-x:auto;}
+  .topnav a{padding:.6rem .85rem;text-decoration:none;color:#444;font-size:.9rem;border:1px solid transparent;border-bottom:none;white-space:nowrap;}
+  .topnav a.active{background:var(--bg);border-color:var(--line);margin-bottom:-1px;font-weight:bold;color:#222;}
+
+  main{max-width:960px;margin:0 auto;padding:1.1rem;}
+  section{margin-bottom:2.2rem;}
+  .sec-label{font-size:.74rem;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin-bottom:.4rem;}
+
+  /* Dashboard polos */
+  .welcome{background:var(--box);border:1px solid var(--line);padding:.9rem 1.1rem;display:flex;justify-content:space-between;align-items:center;margin-bottom:1.1rem;}
+  .btn{border:1px solid var(--line);border-radius:3px;padding:.45rem .9rem;font-size:.88rem;cursor:pointer;font-family:inherit;background:#f0f0f0;color:#222;}
+  .btn:hover{background:#e6e6e6;}
+  .btn-primary,.btn-ghost,.btn-sm{border:1px solid var(--line);border-radius:3px;padding:.45rem .9rem;font-size:.88rem;background:#f0f0f0;color:#222;font-weight:normal;}
+  .search{width:100%;padding:.5rem .7rem;border:1px solid var(--line);border-radius:3px;margin-bottom:1rem;font-size:.92rem;}
+
+  /* Kartu biasa: kotak bergaris, tanpa aksen warna */
+  .cycle-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:.8rem;}
+  .cycle-card,.cycle-card.do,.cycle-card.see,.cycle-card.selesai{background:var(--box);border:1px solid var(--line);border-radius:3px;padding:.9rem;box-shadow:none;}
+  .pill,.pill.do,.pill.see,.pill.selesai{display:inline-block;font-size:.72rem;font-weight:normal;padding:.1rem .5rem;border:1px solid var(--line);border-radius:3px;background:#f0f0f0;color:#444;}
+  .cycle-meta{margin:.5rem 0;font-size:.82rem;color:var(--muted);display:flex;flex-direction:column;gap:.15rem;}
+  .cycle-foot{display:flex;justify-content:space-between;align-items:center;font-size:.78rem;color:var(--muted);margin-top:.5rem;border-top:1px solid var(--line-soft);padding-top:.4rem;}
+
+  /* Panel dua kolom (Plan/Do/See) — polos */
+  .phase-head{margin-bottom:.6rem;}
+  .stepper{display:flex;gap:.4rem;align-items:center;font-size:.82rem;color:var(--muted);margin:.4rem 0 1.1rem;}
+  .stepper b{color:#222;}
+  .layout{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;}
+  @media(max-width:820px){.layout{grid-template-columns:1fr;}}
+  .panel{background:var(--box);border:1px solid var(--line);border-radius:3px;margin-bottom:.9rem;overflow:hidden;}
+  .panel-head{background:var(--head);padding:.6rem .85rem;font-weight:bold;font-size:.88rem;color:#222;border-bottom:1px solid var(--line);}
+  .panel-body{padding:.85rem;}
+  label.field{display:block;font-size:.82rem;font-weight:bold;margin-bottom:.9rem;}
+  label.field textarea,label.field input{width:100%;margin-top:.3rem;padding:.5rem .65rem;border:1px solid var(--line);border-radius:3px;font-family:inherit;font-size:.9rem;}
+  .members-row{display:flex;flex-wrap:wrap;gap:.4rem;}
+  .member-badge{display:inline-flex;align-items:center;gap:.35rem;border:1px solid var(--line);border-radius:3px;padding:.2rem .55rem;font-size:.78rem;background:#fafafa;}
+  .dot,.dot.guru,.dot.observer,.dot.dosen{width:8px;height:8px;border-radius:50%;display:inline-block;background:#999;}
+  .file-item{display:flex;align-items:center;gap:.5rem;padding:.4rem 0;border-bottom:1px solid var(--line-soft);font-size:.85rem;}
+  .file-item:last-child{border-bottom:none;}
+  .entry{border:1px solid var(--line);border-radius:3px;padding:.55rem .7rem;margin-bottom:.5rem;background:#fafafa;}
+  .entry .eh{font-size:.78rem;color:var(--muted);margin-bottom:.2rem;}
+  .empty{color:var(--muted);font-size:.85rem;padding:.6rem 0;}
+  .note{max-width:1000px;margin:0 auto 1rem;padding:.6rem .9rem;background:#fff7e6;border:1px solid #ffe4a3;border-radius:8px;font-size:.85rem;color:#8a6d0b;}
+</style>
+</head>
+<body>
+
+  <!-- ===== App bar ===== -->
+  <header class="appbar">
+    <div class="brand"><span class="logo">LS</span> Lesson Study Platform</div>
+    <div class="user">SN</div>
+  </header>
+
+  <!-- ===== Top nav ===== -->
+  <nav class="topnav">
+    <a href="#dashboard" class="active">Dashboard</a>
+    <a href="#plan">Plan</a>
+    <a href="#do">Do</a>
+    <a href="#see">See</a>
+    <a href="#repository">Repository</a>
+  </nav>
+
+  <p class="note">Mockup statis “versi lama” (tanpa JavaScript, tampilan polos). Semua tab ditampilkan berurutan untuk perbandingan tahap pengembangan.</p>
+
+  <main>
+
+    <!-- ================= DASHBOARD ================= -->
+    <section id="dashboard">
+      <div class="welcome">
+        <div>
+          <h2 style="margin:0">Halo, Siti</h2>
+          <div class="muted">Guru Model · SMP Negeri 1 Makassar</div>
+        </div>
+        <button class="btn">+ Siklus Baru</button>
+      </div>
+
+      <h3>Siklus Lesson Study</h3>
+      <input class="search" type="search" placeholder="Cari judul, mapel, sekolah…" />
+
+      <div class="cycle-grid">
+        <article class="cycle-card">
+          <span class="pill">Plan</span>
+          <h4 style="margin:.5rem 0 0">Pembelajaran Matematika</h4>
+          <div class="cycle-meta">
+            <span>Mapel: Matematika</span>
+            <span>Materi: Bilangan Bulat (KPK &amp; FPB)</span>
+            <span>Kelas: VII-A</span>
+            <span>Sekolah: SMP Muhammadiyah 1 Makassar</span>
+          </div>
+          <div class="cycle-foot"><span>Pemilik: Administrator</span><span>Anggota 3 · Catatan 1</span></div>
+        </article>
+
+        <article class="cycle-card selesai">
+          <span class="pill selesai">Selesai</span>
+          <h4 style="margin:.5rem 0 0">Tes Siklus</h4>
+          <div class="cycle-meta">
+            <span>Mapel: Matematika</span>
+            <span>Materi: Bilangan Bulat</span>
+            <span>Kelas: VII-A</span>
+            <span>Sekolah: SMP Muhammadiyah 1 Makassar</span>
+          </div>
+          <div class="cycle-foot"><span>Pemilik: Siti Nurhaliza, S.Pd.</span><span>Anggota 3 · Catatan 8</span></div>
+        </article>
+      </div>
+    </section>
+
+    <!-- ================= PLAN ================= -->
+    <section id="plan">
+      <div class="sec-label">Modul Plan</div>
+      <div class="phase-head"><h2 style="margin:0">Sesi Perencanaan</h2></div>
+      <div class="stepper"><b>Plan</b> &gt; Do &gt; See &gt; Selesai</div>
+
+      <div class="layout">
+        <div>
+          <div class="panel">
+            <div class="panel-head">Rencana Pembelajaran — Matematika</div>
+            <div class="panel-body">
+              <label class="field">Capaian pembelajaran
+                <textarea rows="3" placeholder="Rumuskan capaian pembelajaran (CP) yang ditargetkan…"></textarea>
+              </label>
+              <label class="field">Tujuan pembelajaran
+                <textarea rows="3" placeholder="Rumuskan tujuan/kompetensi yang ingin dicapai…"></textarea>
+              </label>
+              <label class="field">Rencana open class
+                <input type="text" placeholder="Tanggal &amp; jam" />
+              </label>
+              <button class="btn">Simpan</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">Diskusi Perencanaan</div>
+            <div class="panel-body">
+              <div class="entry">
+                <div class="eh">Administrator · Guru Model · 1 jam lalu</div>
+                <div>Mohon dicek kembali alur apersepsinya.</div>
+              </div>
+              <label class="field" style="margin:0">
+                <textarea rows="2" placeholder="Diskusikan rencana pelajaran…"></textarea>
+              </label>
+              <button class="btn btn-primary btn-sm" style="margin-top:.5rem">Kirim</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <div class="panel-head">Perangkat Perencanaan</div>
+            <div class="panel-body">
+              <div class="file-item"><span>Modul Ajar.docx</span><span class="muted" style="margin-left:auto">9 KB</span></div>
+              <div class="file-item"><span>LKPD.pdf</span><span class="muted" style="margin-left:auto">95 KB</span></div>
+              <button class="btn" style="margin-top:.6rem">Tambah dokumen</button>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head">Tim Kolaborasi</div>
+            <div class="panel-body">
+              <div class="members-row">
+                <span class="member-badge"><span class="dot guru"></span>Administrator · Guru Model</span>
+                <span class="member-badge"><span class="dot observer"></span>Ahmad Fauzi, S.Pd. · Guru Observer</span>
+                <span class="member-badge"><span class="dot dosen"></span>Dosen Pengawas 1 · Dosen Pengawas</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= DO ================= -->
+    <section id="do">
+      <div class="sec-label">Modul Do</div>
+      <div class="phase-head"><h2 style="margin:0">Pelaksanaan &amp; Observasi</h2></div>
+      <div class="stepper">Plan &gt; <b>Do</b> &gt; See &gt; Selesai</div>
+
+      <div class="layout">
+        <div>
+          <div class="panel">
+            <div class="panel-head">Pelaksanaan Open Class</div>
+            <div class="panel-body">
+              <label class="field">Tanggal &amp; jam pelaksanaan
+                <input type="text" placeholder="mis. 12 Sep 2026 · 08.00 WITA" />
+              </label>
+              <label class="field">Catatan pelaksanaan
+                <textarea rows="3" placeholder="Catatan jalannya pembelajaran…"></textarea>
+              </label>
+              <div class="file-item"><span>video-open-class.mp4</span><span class="muted" style="margin-left:auto">43,8 MB</span></div>
+              <button class="btn" style="margin-top:.6rem">Tambah video</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <div class="panel-head">Catatan Observasi</div>
+            <div class="panel-body">
+              <div class="entry">
+                <div class="eh">Ahmad Fauzi, S.Pd. · Guru Observer · Fokus: keterlibatan siswa</div>
+                <div>Kelompok 2 aktif berdiskusi, kelompok 4 perlu pendampingan.</div>
+              </div>
+              <label class="field" style="margin:0">
+                <input type="text" placeholder="Fokus observasi (opsional)" style="margin-bottom:.5rem" />
+                <textarea rows="2" placeholder="Tambahkan catatan observasi…"></textarea>
+              </label>
+              <button class="btn btn-primary btn-sm" style="margin-top:.5rem">Kirim</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SEE ================= -->
+    <section id="see">
+      <div class="sec-label">Modul See</div>
+      <div class="phase-head"><h2 style="margin:0">Refleksi &amp; Evaluasi</h2></div>
+      <div class="stepper">Plan &gt; Do &gt; <b>See</b> &gt; Selesai</div>
+
+      <div class="layout">
+        <div>
+          <div class="panel">
+            <div class="panel-head">Refleksi Pembelajaran</div>
+            <div class="panel-body">
+              <label class="field">Analisis pembelajaran
+                <textarea rows="3" placeholder="Apa yang berjalan baik? Apa temuan utama?"></textarea>
+              </label>
+              <label class="field">Rekomendasi perbaikan
+                <textarea rows="3" placeholder="Rencana perbaikan untuk siklus berikutnya…"></textarea>
+              </label>
+              <button class="btn">Simpan</button>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="panel">
+            <div class="panel-head">Refleksi Kolaboratif</div>
+            <div class="panel-body">
+              <div class="entry">
+                <div class="eh">Dosen Pengawas 1 · Dosen Pengawas · 20 mnt lalu</div>
+                <div>Apersepsi sudah baik; alokasi waktu diskusi bisa ditambah.</div>
+              </div>
+              <label class="field" style="margin:0">
+                <textarea rows="2" placeholder="Apa yang berjalan baik? Apa yang perlu diperbaiki?"></textarea>
+              </label>
+              <button class="btn btn-primary btn-sm" style="margin-top:.5rem">Kirim</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= REPOSITORY ================= -->
+    <section id="repository">
+      <div class="sec-label">Repository</div>
+      <div class="phase-head"><h2 style="margin:0">Praktik Baik</h2></div>
+      <input class="search" type="search" placeholder="Cari praktik baik…" />
+      <div class="cycle-grid">
+        <article class="cycle-card">
+          <span class="pill">Praktik Baik</span>
+          <h4 style="margin:.5rem 0 0">Diskusi Bilangan Bulat yang Aktif</h4>
+          <div class="cycle-meta"><span>Matematika · VII-A</span><span>Pemilik: Siti Nurhaliza, S.Pd.</span></div>
+        </article>
+      </div>
+    </section>
+
+  </main>
+</body>
+</html>

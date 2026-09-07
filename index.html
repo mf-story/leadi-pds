@@ -80,6 +80,7 @@
       <button class="topnav-tab" data-nav="do"><span>🎥</span> Do</button>
       <button class="topnav-tab" data-nav="see"><span>🔍</span> See</button>
       <button class="topnav-tab" data-nav="repo"><span>🗄️</span> Repository</button>
+      <button class="topnav-tab" data-nav="arsip"><span>🗃️</span> Arsip</button>
     </nav>
 
     <!-- Konteks siklus aktif (untuk Plan/Do/See) -->
@@ -138,6 +139,14 @@
         <div id="repoList" class="cycle-grid"></div>
       </section>
 
+      <!-- ARSIP -->
+      <section id="view-arsip" class="view" hidden>
+        <div class="page-head"><h2>Arsip Siklus</h2></div>
+        <p class="muted">Siklus yang diarsipkan agar Dashboard tetap ringkas. Datanya tetap tersimpan dan bisa dipulihkan kapan saja.</p>
+        <input type="search" id="arsipSearch" placeholder="🔍 Cari siklus di arsip…" class="repo-search" />
+        <div id="arsipList" class="cycle-grid"></div>
+      </section>
+
       <!-- USERS (admin) -->
       <section id="view-users" class="view" hidden>
         <div class="page-head"><h2>Kelola Pengguna</h2><button id="newUserBtn" class="btn btn-primary btn-sm">+ Pengguna</button></div>
@@ -180,6 +189,7 @@
         <button data-nav="do"><span>🎥</span> Do</button>
         <button data-nav="see"><span>🔍</span> See</button>
         <button data-nav="repo"><span>🗄️</span> Repository</button>
+        <button data-nav="arsip"><span>🗃️</span> Arsip</button>
         <hr />
         <button id="drawerNewCycle"><span>➕</span> Siklus Baru</button>
         <button data-nav="users" data-admin><span>👥</span> Kelola Pengguna</button>

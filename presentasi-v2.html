@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LeaDi-PDS — Presentasi Aplikasi</title>
+<style>
+  :root{
+    --navy:#12305c; --navy-deep:#0d2445; --blue:#1e4276; --blue-2:#2b5aa0;
+    --accent:#2f6fed; --gold:#e0b23e; --gold-deep:#c99a2e;
+    --cream:#f5f8fd; --ink:#12233d; --muted:#6b7a90; --line:#e2e9f3;
+    --do:#d97706; --see:#7c3aed; --plan:#2563eb;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  html,body{height:100%;}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,sans-serif;
+    background:#0a1a33;color:var(--ink);overflow:hidden;
+  }
+  /* ===== Deck frame (16:9) ===== */
+  .deck{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;}
+  .stage{position:relative;width:min(100vw,177.78vh);height:min(56.25vw,100vh);
+    background:#fff;overflow:hidden;box-shadow:0 30px 90px -30px rgba(0,0,0,.7);}
+  .slide{position:absolute;inset:0;padding:6.2% 7%;opacity:0;visibility:hidden;
+    transform:translateY(14px) scale(.995);transition:opacity .5s ease,transform .5s ease;
+    display:flex;flex-direction:column;justify-content:center;}
+  .slide.active{opacity:1;visibility:visible;transform:none;}
+  /* type scale relative to viewport width of the stage */
+  .stage{font-size:clamp(11px,1.55vh,22px);}
+  h1{font-size:4.4em;font-weight:800;line-height:1.02;letter-spacing:-.02em;}
+  h2{font-size:2.9em;font-weight:800;line-height:1.05;letter-spacing:-.01em;}
+  h3{font-size:1.35em;font-weight:700;}
+  p{font-size:1.15em;line-height:1.5;color:var(--muted);}
+  .kicker{display:inline-flex;align-items:center;gap:.6em;font-size:.9em;font-weight:700;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--gold-deep);}
+  .kicker::before{content:"";width:2.4em;height:2px;background:var(--gold);}
+  .rule{width:3.2em;height:4px;background:var(--gold);border-radius:2px;margin:.9em 0 1.1em;}
+  .accent{color:var(--accent);} .gold{color:var(--gold-deep);}
+
+  /* ===== Dark slides ===== */
+  .slide.dark{background:radial-gradient(120% 120% at 12% 8%,#1b477f 0%,#12305c 48%,#0c2143 100%);color:#eaf1fb;}
+  .slide.dark p{color:rgba(234,241,251,.72);}
+  .slide.dark .kicker{color:var(--gold);}
+  .slide.dark h2, .slide.dark h1{color:#fff;}
+  .deco-arc{position:absolute;border-radius:50%;border:2px solid rgba(255,255,255,.10);pointer-events:none;}
+  .deco-dot{position:absolute;border-radius:50%;background:rgba(224,178,62,.9);pointer-events:none;}
+
+  /* ===== Cover ===== */
+  .cover .brand{display:flex;align-items:center;gap:.7em;font-weight:700;font-size:1.15em;color:rgba(255,255,255,.9);margin-bottom:1.4em;}
+  .cover .logo{width:2.6em;height:2.6em;border-radius:.7em;background:linear-gradient(160deg,#14818b,#0d5c63);
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;box-shadow:0 8px 24px rgba(0,0,0,.35);}
+  .cover h1{max-width:14ch;} .cover .sub{margin-top:.8em;font-size:1.35em;color:rgba(234,241,251,.8);max-width:34ch;}
+  .cover .pills{display:flex;gap:.6em;margin-top:1.8em;flex-wrap:wrap;}
+  .pill{font-size:.95em;font-weight:700;padding:.5em 1.1em;border-radius:2em;
+    background:rgba(255,255,255,.10);border:1px solid rgba(255,255,255,.18);color:#fff;}
+  .cover .foot{position:absolute;left:7%;right:7%;bottom:5.5%;display:flex;justify-content:space-between;
+    align-items:center;font-size:.9em;color:rgba(234,241,251,.6);}
+
+  /* ===== Grids ===== */
+  .grid{display:grid;gap:1.1em;margin-top:.4em;}
+  .g2{grid-template-columns:1fr 1fr;} .g3{grid-template-columns:repeat(3,1fr);} .g4{grid-template-columns:repeat(4,1fr);}
+  .card{background:#fff;border:1px solid var(--line);border-radius:1em;padding:1.25em 1.3em;
+    box-shadow:0 18px 40px -28px rgba(18,48,92,.5);}
+  .slide.dark .card{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);color:#eaf1fb;box-shadow:none;}
+  .card .ic{font-size:1.7em;} .card h3{margin:.35em 0 .3em;} .card p{font-size:.95em;line-height:1.4;}
+  .slide.dark .card p{color:rgba(234,241,251,.72);}
+
+  /* numbered steps */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:1.1em;margin-top:.6em;}
+  .step{position:relative;padding:1.3em 1.2em;border-radius:1em;background:#fff;border:1px solid var(--line);box-shadow:0 18px 40px -28px rgba(18,48,92,.5);}
+  .step .n{font-size:2.6em;font-weight:800;color:var(--gold);line-height:1;}
+  .step h3{margin:.2em 0 .25em;} .step p{font-size:.95em;line-height:1.4;}
+  .step.plan .n{color:var(--plan);} .step.do .n{color:var(--do);} .step.see .n{color:var(--see);}
+
+  /* Plan-Do-See satu halaman (tiga kolom) */
+  .pds{display:flex;align-items:stretch;gap:.8em;margin-top:.5em;}
+  .pds-col{flex:1;background:#fff;border:1px solid var(--line);border-top:5px solid var(--plan);border-radius:1em;
+    padding:1.15em 1.25em;box-shadow:0 18px 40px -28px rgba(18,48,92,.5);}
+  .pds-col.do{border-top-color:var(--do);} .pds-col.see{border-top-color:var(--see);}
+  .pds-h{display:flex;align-items:center;gap:.6em;margin-bottom:.75em;}
+  .pds-ic{font-size:1.9em;}
+  .pds-t{display:block;font-size:1.5em;font-weight:800;line-height:1;color:var(--plan);}
+  .pds-s{display:block;font-size:.9em;color:var(--muted);margin-top:.15em;}
+  .pds-col.do .pds-t{color:var(--do);} .pds-col.see .pds-t{color:var(--see);}
+  .pds-col ul{list-style:none;display:flex;flex-direction:column;gap:.5em;}
+  .pds-col li{position:relative;padding-left:1.35em;font-size:1.02em;line-height:1.35;color:var(--ink);}
+  .pds-col li::before{content:"✓";position:absolute;left:0;color:var(--gold-deep);font-weight:800;}
+  .pds-arrow{align-self:center;font-size:1.9em;color:var(--gold-deep);font-weight:800;flex:0 0 auto;}
+  @media (max-width:640px){ .pds{flex-direction:column;} .pds-arrow{transform:rotate(90deg);} }
+  /* v2: kartu Plan/Do/See diperbesar, tanpa judul */
+  .pds-slide{justify-content:center;}
+  .pds-slide .pds{gap:1.1em;}
+  .pds-slide .pds-col{padding:1.7em 1.8em;border-radius:1.2em;border-top-width:7px;}
+  .pds-slide .pds-h{margin-bottom:1em;gap:.7em;}
+  .pds-slide .pds-ic{font-size:2.5em;}
+  .pds-slide .pds-t{font-size:2em;}
+  .pds-slide .pds-s{font-size:1.05em;margin-top:.2em;}
+  .pds-slide .pds-col ul{gap:.75em;}
+  .pds-slide .pds-col li{font-size:1.28em;padding-left:1.6em;line-height:1.4;}
+  .pds-slide .pds-arrow{font-size:2.5em;}
+
+  /* two-column feature layout */
+  .split{display:grid;grid-template-columns:1.05fr .95fr;gap:2.4em;align-items:center;height:100%;}
+  .bullets{list-style:none;display:flex;flex-direction:column;gap:.9em;margin-top:.4em;}
+  .bullets li{position:relative;padding-left:1.7em;font-size:1.12em;line-height:1.4;}
+  .bullets li::before{content:"";position:absolute;left:0;top:.5em;width:.7em;height:.7em;border-radius:50%;
+    background:var(--accent);box-shadow:0 0 0 4px rgba(47,111,237,.15);}
+  .slide.dark .bullets li::before{background:var(--gold);box-shadow:0 0 0 4px rgba(224,178,62,.18);}
+
+  /* mock browser panel */
+  .mock{background:#fff;border:1px solid var(--line);border-radius:1em;overflow:hidden;box-shadow:0 30px 70px -34px rgba(18,48,92,.7);}
+  .mock .bar{display:flex;align-items:center;gap:.4em;padding:.7em .9em;background:#eef3fb;border-bottom:1px solid var(--line);}
+  .mock .bar i{width:.75em;height:.75em;border-radius:50%;background:#cfd8e6;display:inline-block;}
+  .mock .body{padding:1.1em 1.2em;display:flex;flex-direction:column;gap:.7em;}
+  .mrow{height:.85em;border-radius:.4em;background:#e9eff8;}
+  .mrow.s{width:55%;} .mrow.m{width:78%;} .mrow.a{background:linear-gradient(90deg,#2f6fed,#7aa7f5);width:42%;height:1.5em;border-radius:.5em;}
+  .chip{display:inline-block;font-size:.8em;font-weight:700;padding:.28em .8em;border-radius:2em;background:#e6f0ff;color:var(--accent);}
+
+  /* stat row */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1.2em;margin-top:1.2em;}
+  .stat .num{font-size:2.7em;font-weight:800;color:var(--gold);line-height:1;}
+  .stat .lbl{font-size:.95em;color:rgba(234,241,251,.75);margin-top:.3em;}
+
+  .tag{display:inline-block;font-size:.82em;font-weight:700;padding:.3em .8em;border-radius:.5em;
+    background:rgba(224,178,62,.15);color:var(--gold-deep);border:1px solid rgba(224,178,62,.35);}
+  .slide.dark .tag{color:var(--gold);}
+
+  .closing h2{max-width:16ch;} .closing .url{font-size:1.6em;font-weight:800;color:#fff;margin-top:.6em;}
+  .closing .url .accent{color:var(--gold);}
+
+  /* ===== Chrome: progress, nav, counter ===== */
+  .progress{position:absolute;left:0;top:0;height:4px;background:var(--gold);width:0;z-index:20;transition:width .4s ease;}
+  .counter{position:absolute;right:2.2%;bottom:3%;font-size:.85em;font-weight:700;color:var(--muted);z-index:20;}
+  .brandmark{position:absolute;left:2.4%;bottom:3%;font-size:.8em;font-weight:700;letter-spacing:.04em;color:var(--muted);z-index:20;}
+  .nav{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);display:flex;gap:.5em;z-index:40;
+    background:rgba(10,26,51,.7);backdrop-filter:blur(8px);padding:.5em .7em;border-radius:2em;border:1px solid rgba(255,255,255,.12);}
+  .nav button{width:34px;height:34px;border:none;border-radius:50%;background:rgba(255,255,255,.14);color:#fff;
+    font-size:1em;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.15s;}
+  .nav button:hover{background:var(--accent);}
+  .hint{position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:40;font-size:12px;color:rgba(255,255,255,.6);
+    background:rgba(10,26,51,.6);padding:.35em .8em;border-radius:1em;transition:opacity .6s ease;}
+  @media (max-width:640px){ .split{grid-template-columns:1fr;gap:1em;} .g3,.g4{grid-template-columns:1fr 1fr;} .steps{grid-template-columns:1fr;} .stats{grid-template-columns:1fr 1fr;} }
+</style>
+</head>
+<body>
+<div class="deck">
+  <div class="stage" id="stage">
+    <div class="progress" id="progress"></div>
+
+    <!-- 1 · COVER -->
+    <section class="slide dark cover active">
+      <div class="deco-arc" style="width:46%;height:46%;right:-8%;top:-14%;"></div>
+      <div class="deco-arc" style="width:26%;height:26%;right:14%;bottom:-12%;border-color:rgba(224,178,62,.25);"></div>
+      <div class="deco-dot" style="width:14px;height:14px;left:14%;bottom:22%;"></div>
+      <div class="brand"><span class="logo">LS</span> Lesson Study Platform</div>
+      <div class="kicker">Digital Platform · Plan · Do · See</div>
+      <h1>LeaDi&#8209;PDS</h1>
+      <div class="sub">Platform digital <b style="color:#fff">Lesson Study</b> untuk penguatan praktik pembelajaran di sekolah.</div>
+      <div class="pills"><span class="pill">📝 Plan</span><span class="pill">🎥 Do</span><span class="pill">🔍 See</span></div>
+      <div class="foot"><span>Presentasi Aplikasi</span><span>lessonstudy.online</span></div>
+    </section>
+
+    <!-- 2 · APA ITU -->
+    <section class="slide">
+      <div class="kicker">Pengantar</div>
+      <h2>Apa itu LeaDi&#8209;PDS?</h2>
+      <div class="rule"></div>
+      <div class="split" style="height:auto;margin-top:.4em">
+        <div>
+          <p style="font-size:1.25em;color:var(--ink)">Aplikasi web kolaboratif yang memandu guru menjalankan <b>siklus Lesson Study</b> secara terstruktur: merencanakan, melaksanakan &amp; mengobservasi, lalu merefleksikan pembelajaran bersama.</p>
+          <p style="margin-top:.9em">Semua tahap, dokumen, video, diskusi, dan hasil refleksi tersimpan rapi dalam satu tempat — dapat diakses kapan saja lewat browser maupun sebagai aplikasi (PWA).</p>
+        </div>
+        <div class="mock">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="body">
+            <span class="chip">Siklus Lesson Study</span>
+            <div class="mrow m"></div><div class="mrow s"></div>
+            <div class="mrow a"></div>
+            <div class="mrow"></div><div class="mrow m"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 3 · MASALAH -->
+    <section class="slide dark">
+      <div class="deco-arc" style="width:40%;height:40%;left:-12%;bottom:-16%;"></div>
+      <div class="kicker">Latar Belakang</div>
+      <h2>Kolaborasi guru sering tercecer</h2>
+      <div class="rule"></div>
+      <div class="grid g3" style="margin-top:1em">
+        <div class="card"><div class="ic">🗂️</div><h3>Dokumen terpisah</h3><p>Perangkat, foto, dan video pembelajaran tersebar di WA, folder, dan flashdisk.</p></div>
+        <div class="card"><div class="ic">💬</div><h3>Diskusi hilang</h3><p>Masukan observer dan refleksi sulit dilacak serta tidak terdokumentasi.</p></div>
+        <div class="card"><div class="ic">📉</div><h3>Sulit dievaluasi</h3><p>Praktik baik tidak terekam sebagai bukti perkembangan mutu pembelajaran.</p></div>
+      </div>
+    </section>
+
+    <!-- 4 · SIKLUS PLAN-DO-SEE (kotak Plan/Do/See) -->
+    <section class="slide pds-slide">
+      <div class="pds">
+        <div class="pds-col plan">
+          <div class="pds-h"><span class="pds-ic">📝</span><div><span class="pds-t">Plan</span><span class="pds-s">Perencanaan</span></div></div>
+          <ul>
+            <li>Capaian &amp; tujuan pembelajaran</li>
+            <li>Perangkat ajar &amp; tautan video</li>
+            <li>Jadwal open class &amp; tim</li>
+            <li>Diskusi perencanaan</li>
+          </ul>
+        </div>
+        <span class="pds-arrow">→</span>
+        <div class="pds-col do">
+          <div class="pds-h"><span class="pds-ic">🎥</span><div><span class="pds-t">Do</span><span class="pds-s">Pelaksanaan &amp; Observasi</span></div></div>
+          <ul>
+            <li>Video open class &amp; catatan</li>
+            <li>Dokumen observasi</li>
+            <li>Temuan observer berfokus</li>
+            <li>Unggahan per tahap</li>
+          </ul>
+        </div>
+        <span class="pds-arrow">→</span>
+        <div class="pds-col see">
+          <div class="pds-h"><span class="pds-ic">🔍</span><div><span class="pds-t">See</span><span class="pds-s">Refleksi &amp; Evaluasi</span></div></div>
+          <ul>
+            <li>Analisis &amp; rekomendasi</li>
+            <li>Refleksi kolaboratif</li>
+            <li>Terbitkan Praktik Baik</li>
+            <li>Laporan siklus (PDF)</li>
+          </ul>
+        </div>
+      </div>
+      <p style="margin-top:1em"><span class="tag">Alur</span> &nbsp; Plan → Do → See → Selesai, dengan status yang jelas di setiap kartu siklus.</p>
+    </section>
+
+    <!-- 5 · FITUR UTAMA -->
+    <section class="slide dark">
+      <div class="kicker">Kemampuan</div>
+      <h2>Fitur utama</h2>
+      <div class="rule"></div>
+      <div class="grid g4" style="margin-top:.8em">
+        <div class="card"><div class="ic">👥</div><h3>Kolaborasi peran</h3><p>Guru Model, Observer, Dosen Pengawas, Admin.</p></div>
+        <div class="card"><div class="ic">🎬</div><h3>Video &amp; tautan</h3><p>Unggah video atau sematkan YouTube/Drive.</p></div>
+        <div class="card"><div class="ic">💬</div><h3>Diskusi + tag</h3><p>Komentar menandai dokumen/video terkait.</p></div>
+        <div class="card"><div class="ic">🔔</div><h3>Notifikasi</h3><p>Pemberitahuan yang bisa langsung diklik.</p></div>
+        <div class="card"><div class="ic">💌</div><h3>Obrolan langsung</h3><p>Chat pribadi antar pengguna + status online.</p></div>
+        <div class="card"><div class="ic">🙋</div><h3>Minta jadi observer</h3><p>Guru mengajukan diri; disetujui Guru Model.</p></div>
+        <div class="card"><div class="ic">🗄️</div><h3>Repository</h3><p>Kumpulan Praktik Baik sebagai bukti.</p></div>
+        <div class="card"><div class="ic">🖨️</div><h3>Laporan PDF</h3><p>Cetak laporan siklus lengkap sekali klik.</p></div>
+      </div>
+    </section>
+
+    <!-- 6 · PERAN -->
+    <section class="slide">
+      <div class="kicker">Peran Pengguna</div>
+      <h2>Setiap orang punya perannya</h2>
+      <div class="rule"></div>
+      <div class="grid g4" style="margin-top:.8em">
+        <div class="card"><span class="chip" style="background:#e6f0ff;color:#2563eb">Guru Model</span><p style="margin-top:.6em">Pemilik siklus — merancang &amp; memimpin open class.</p></div>
+        <div class="card"><span class="chip" style="background:#fff3e0;color:#d97706">Guru Observer</span><p style="margin-top:.6em">Mengamati, mengunggah dokumen, memberi catatan.</p></div>
+        <div class="card"><span class="chip" style="background:#f3e8ff;color:#7c3aed">Dosen Pengawas</span><p style="margin-top:.6em">Mendampingi, memberi masukan, menerbitkan.</p></div>
+        <div class="card"><span class="chip" style="background:#eef2f6;color:#64748b">Admin</span><p style="margin-top:.6em">Kelola pengguna, sekolah/instansi, &amp; persetujuan.</p></div>
+      </div>
+    </section>
+
+    <!-- 7 · PLAN -->
+    <section class="slide dark">
+      <div class="split">
+        <div>
+          <div class="kicker">Modul 01</div>
+          <h2>📝 Plan — Perencanaan</h2>
+          <div class="rule"></div>
+          <ul class="bullets">
+            <li>Capaian &amp; tujuan pembelajaran dengan editor teks</li>
+            <li>Perangkat ajar (dokumen) &amp; tautan video referensi</li>
+            <li>Jadwal open class + tim kolaborasi</li>
+            <li>Diskusi perencanaan dengan tag perangkat</li>
+          </ul>
+        </div>
+        <div class="mock">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="body">
+            <span class="chip">Rencana Pembelajaran</span>
+            <div class="mrow m"></div><div class="mrow"></div><div class="mrow s"></div>
+            <div class="mrow a"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 8 · DO -->
+    <section class="slide">
+      <div class="split">
+        <div class="mock">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="body">
+            <span class="chip" style="background:#fff3e0;color:#d97706">Open Class</span>
+            <div class="mrow m"></div><div class="mrow s"></div>
+            <div class="mrow" style="height:3.4em;background:linear-gradient(135deg,#20364f,#33507a);border-radius:.6em"></div>
+            <div class="mrow m"></div>
+          </div>
+        </div>
+        <div>
+          <div class="kicker gold">Modul 02</div>
+          <h2>🎥 Do — Pelaksanaan &amp; Observasi</h2>
+          <div class="rule"></div>
+          <ul class="bullets">
+            <li>Unggah video open class (streaming, hingga 200 MB)</li>
+            <li>Catatan pelaksanaan &amp; dokumen observasi</li>
+            <li>Observer mencatat temuan dengan fokus tertentu</li>
+            <li>Unggahan observer per tahap</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- 9 · SEE + REPO -->
+    <section class="slide dark">
+      <div class="split">
+        <div>
+          <div class="kicker">Modul 03</div>
+          <h2>🔍 See — Refleksi &amp; Praktik Baik</h2>
+          <div class="rule"></div>
+          <ul class="bullets">
+            <li>Analisis pembelajaran &amp; rekomendasi perbaikan</li>
+            <li>Refleksi kolaboratif seluruh tim</li>
+            <li>Terbitkan sebagai <b style="color:#fff">Praktik Baik</b> ke Repository</li>
+            <li>Laporan siklus lengkap siap cetak PDF</li>
+          </ul>
+        </div>
+        <div class="mock">
+          <div class="bar"><i></i><i></i><i></i></div>
+          <div class="body">
+            <span class="chip" style="background:#f3e8ff;color:#7c3aed">Refleksi</span>
+            <div class="mrow"></div><div class="mrow m"></div>
+            <span class="chip" style="background:rgba(224,178,62,.18);color:#e0b23e">🏆 Praktik Baik</span>
+            <div class="mrow s"></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 10 · KOLABORASI REALTIME -->
+    <section class="slide">
+      <div class="kicker">Kolaborasi</div>
+      <h2>Terhubung &amp; real&#8209;time</h2>
+      <div class="rule"></div>
+      <div class="grid g3" style="margin-top:1em">
+        <div class="card"><div class="ic">💌</div><h3>Obrolan langsung</h3><p>Chat pribadi antar pengguna dengan indikator online &amp; tanda pesan baru.</p></div>
+        <div class="card"><div class="ic">🔔</div><h3>Notifikasi pintar</h3><p>Saat ditambahkan ke siklus atau ada aktivitas — klik untuk langsung menuju.</p></div>
+        <div class="card"><div class="ic">🙋</div><h3>Gabung sebagai observer</h3><p>Guru lain meminta bergabung; Guru Model menerima atau menolak.</p></div>
+      </div>
+    </section>
+
+    <!-- 11 · TEKNOLOGI -->
+    <section class="slide dark">
+      <div class="deco-arc" style="width:38%;height:38%;right:-10%;top:-12%;"></div>
+      <div class="kicker">Di Balik Layar</div>
+      <h2>Ringan, aman, mudah diakses</h2>
+      <div class="rule"></div>
+      <div class="grid g4" style="margin-top:.6em">
+        <div class="card"><div class="ic">⚙️</div><h3>Node.js murni</h3><p>Tanpa dependensi npm — cepat &amp; hemat sumber daya.</p></div>
+        <div class="card"><div class="ic">📱</div><h3>PWA</h3><p>Bisa dipasang seperti aplikasi, mendukung mode luring.</p></div>
+        <div class="card"><div class="ic">🔒</div><h3>Aman</h3><p>Kata sandi ter-hash (scrypt) &amp; sesi bertoken.</p></div>
+        <div class="card"><div class="ic">☁️</div><h3>Online 24/7</h3><p>VPS + Coolify, domain &amp; HTTPS di lessonstudy.online.</p></div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="num">3</div><div class="lbl">Tahap siklus</div></div>
+        <div class="stat"><div class="num">4</div><div class="lbl">Peran pengguna</div></div>
+        <div class="stat"><div class="num">200MB</div><div class="lbl">Unggah video</div></div>
+        <div class="stat"><div class="num">PWA</div><div class="lbl">Lintas perangkat</div></div>
+      </div>
+    </section>
+
+    <!-- 12 · MANFAAT -->
+    <section class="slide">
+      <div class="kicker">Dampak</div>
+      <h2>Mengapa LeaDi&#8209;PDS?</h2>
+      <div class="rule"></div>
+      <div class="grid g2" style="margin-top:.6em">
+        <div class="card"><h3>✅ Terstruktur</h3><p>Alur Plan-Do-See yang jelas menjaga kualitas setiap siklus lesson study.</p></div>
+        <div class="card"><h3>✅ Terdokumentasi</h3><p>Semua bukti — dokumen, video, diskusi, refleksi — tersimpan &amp; mudah dicari.</p></div>
+        <div class="card"><h3>✅ Kolaboratif</h3><p>Guru, observer, dan dosen bekerja bersama secara real-time di satu ruang.</p></div>
+        <div class="card"><h3>✅ Berkelanjutan</h3><p>Repository Praktik Baik menjadi rujukan pengembangan mutu berkelanjutan.</p></div>
+      </div>
+    </section>
+
+    <!-- 13 · PENUTUP -->
+    <section class="slide dark closing">
+      <div class="deco-arc" style="width:44%;height:44%;left:-12%;bottom:-16%;"></div>
+      <div class="deco-dot" style="width:12px;height:12px;right:18%;top:24%;"></div>
+      <div class="kicker">Terima Kasih</div>
+      <h2>Mulai perkuat praktik pembelajaran di sekolah Anda</h2>
+      <div class="url">🌐 <span class="accent">lessonstudy.online</span></div>
+      <div class="pills"><span class="pill">📝 Plan</span><span class="pill">🎥 Do</span><span class="pill">🔍 See</span></div>
+    </section>
+
+    <div class="brandmark">LeaDi-PDS</div>
+    <div class="counter" id="counter">1 / 13</div>
+  </div>
+</div>
+
+<div class="hint" id="hint">← → atau klik untuk berpindah slide · F untuk layar penuh</div>
+<div class="nav">
+  <button id="prev" title="Sebelumnya">‹</button>
+  <button id="full" title="Layar penuh">⛶</button>
+  <button id="next" title="Berikutnya">›</button>
+</div>
+
+<script>
+  (function(){
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var i = 0, n = slides.length;
+    var counter = document.getElementById('counter');
+    var progress = document.getElementById('progress');
+    var brandmark = document.querySelector('.brandmark');
+    var hint = document.getElementById('hint');
+    function show(idx){
+      i = Math.max(0, Math.min(n-1, idx));
+      slides.forEach(function(s,k){ s.classList.toggle('active', k===i); });
+      counter.textContent = (i+1)+' / '+n;
+      progress.style.width = ((i)/(n-1)*100)+'%';
+      var dark = slides[i].classList.contains('dark');
+      counter.style.color = dark ? '#fff' : '#6b7a90';
+      brandmark.style.color = dark ? 'rgba(255,255,255,.6)' : '#6b7a90';
+    }
+    function next(){ show(i+1); } function prev(){ show(i-1); }
+    document.getElementById('next').onclick = next;
+    document.getElementById('prev').onclick = prev;
+    document.getElementById('full').onclick = function(){
+      if(!document.fullscreenElement){ document.documentElement.requestFullscreen && document.documentElement.requestFullscreen(); }
+      else { document.exitFullscreen && document.exitFullscreen(); }
+    };
+    document.addEventListener('keydown', function(e){
+      if(e.key==='ArrowRight'||e.key==='PageDown'||e.key===' '){ e.preventDefault(); next(); }
+      else if(e.key==='ArrowLeft'||e.key==='PageUp'){ e.preventDefault(); prev(); }
+      else if(e.key==='Home'){ show(0); } else if(e.key==='End'){ show(n-1); }
+      else if(e.key==='f'||e.key==='F'){ document.getElementById('full').click(); }
+    });
+    // click on the stage advances (ignore clicks on nav)
+    document.getElementById('stage').addEventListener('click', function(e){
+      var r = this.getBoundingClientRect();
+      if((e.clientX - r.left) < r.width*0.28){ prev(); } else { next(); }
+    });
+    setTimeout(function(){ hint.style.opacity = '0'; }, 4200);
+    show(0);
+  })();
+</script>
+</body>
+</html>

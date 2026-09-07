@@ -259,6 +259,7 @@ function cleanCycle(body, existing) {
     },
     entries: existing ? (existing.entries || []) : [],
     joinRequests: existing ? (existing.joinRequests || []) : [],
+    archived: existing ? !!existing.archived : false,
     createdBy: existing ? existing.createdBy : null,
     createdAt: existing ? existing.createdAt : Date.now(),
     updatedAt: Date.now()
@@ -687,6 +688,17 @@ async function handleApi(req, res, url) {
       saveDB();
       return sendJSON(res, 200, { cycle: enrichCycle(c) });
     }
+    // === Arsipkan / pulihkan siklus (pemilik atau admin) ===
+    if (seg[1] && (seg[2] === 'archive' || seg[2] === 'unarchive') && method === 'POST') {
+      const c = DB.cycles.find(x => x.id === seg[1]);
+      if (!c) return sendJSON(res, 404, { error: 'Siklus tidak ditemukan' });
+      if (!(isAdmin(me) || c.ownerId === me.id)) return sendJSON(res, 403, { error: 'Hanya pemilik atau admin yang dapat mengarsipkan siklus' });
+      c.archived = seg[2] === 'archive';
+      c.updatedAt = Date.now();
+      saveDB();
+      return sendJSON(res, 200, { cycle: enrichCycle(c) });
+    }
+
     // === Permintaan bergabung sebagai observer ===
     // guru/observer yang belum tergabung mengajukan diri
     if (seg[1] && seg[2] === 'join-request' && !seg[3] && method === 'POST') {
@@ -1072,6 +1084,7 @@ function summarizeCycle(c) {
     entryCount: (c.entries || []).length,
     published: !!(c.praktikBaik && c.praktikBaik.published),
     pendingJoin: (c.joinRequests || []).filter(r => r.status === 'pending').length,
+    archived: !!c.archived,
     tanggalRencana: (c.plan && c.plan.tanggalRencana) || '',
     updatedAt: c.updatedAt, createdAt: c.createdAt
   };
