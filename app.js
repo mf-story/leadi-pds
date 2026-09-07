@@ -217,7 +217,6 @@
     else if (isPhase) renderPhaseView(view);
     else if (view === 'repo') loadRepo();
     else if (view === 'media') loadMedia();
-    else if (view === 'arsip') renderArsip();
     else if (view === 'users') loadUsers();
     else if (view === 'schools') loadSchools();
     else if (view === 'institutions') loadInstitutions();
@@ -285,7 +284,7 @@
   }
   function renderCycleList() {
     const q = ($('#cycleSearch').value || '').toLowerCase();
-    let list = state.cycles.filter(c => !c.archived);
+    let list = state.cycles;
     if (state.scopeFilter === 'mine') list = list.filter(c => c.mine);
     if (state.statusFilter !== 'all') list = list.filter(c => c.status === state.statusFilter);
     if (q) list = list.filter(c => (c.title + ' ' + c.mapel + ' ' + c.sekolah + ' ' + c.kelas + ' ' + c.ownerName).toLowerCase().includes(q));
@@ -314,8 +313,7 @@
   // ---------------- Cycle context bar ----------------
   function renderCycleContext() {
     const sel = $('#cycleSwitcher');
-    const swList = state.cycles.filter(c => !c.archived || c.id === state.activeId);
-    sel.innerHTML = swList.map(c => `<option value="${c.id}" ${c.id === state.activeId ? 'selected' : ''}>${esc(c.title)}${c.archived ? ' 🗃️' : ''} — ${STATUS_LABEL[c.status]}</option>`).join('') || '<option value="">(belum ada siklus)</option>';
+    sel.innerHTML = state.cycles.map(c => `<option value="${c.id}" ${c.id === state.activeId ? 'selected' : ''}>${esc(c.title)} — ${STATUS_LABEL[c.status]}</option>`).join('') || '<option value="">(belum ada siklus)</option>';
     const c = state.current;
     const acts = $('#ccActions');
     if (!c) { acts.innerHTML = ''; return; }
@@ -327,7 +325,6 @@
       ${editable && c.status !== 'selesai' ? `<button class="btn btn-primary btn-sm" data-cc="advance">${advanceLabel(c.status)}</button>` : ''}
       ${can.publish() && (c.status === 'see' || c.status === 'selesai') ? `<button class="btn btn-ghost btn-sm" data-cc="publish">🏆 ${c.praktikBaik && c.praktikBaik.published ? 'Perbarui' : 'Terbitkan'}</button>` : ''}
       <button class="btn btn-ghost btn-sm" data-cc="print">🖨️ PDF</button>
-      ${can.delete(c) ? (c.archived ? `<button class="btn btn-ghost btn-sm" data-cc="unarchive">♻️ Pulihkan</button>` : `<button class="btn btn-ghost btn-sm" data-cc="archive">🗃️ Arsipkan</button>`) : ''}
       ${can.delete(c) ? `<button class="btn btn-danger btn-sm" data-cc="delete">🗑</button>` : ''}`;
   }
   function advanceLabel(st) { return st === 'plan' ? 'Lanjut ke Do →' : st === 'do' ? 'Lanjut ke See →' : 'Tandai Selesai ✓'; }
@@ -343,8 +340,6 @@
     else if (a === 'advance') advancePhase(c);
     else if (a === 'publish') openPublish(c);
     else if (a === 'print') printCycleReport(c);
-    else if (a === 'archive') archiveCycle(c, true);
-    else if (a === 'unarchive') archiveCycle(c, false);
     else if (a === 'delete') deleteCycle(c);
   });
 
@@ -1087,41 +1082,6 @@
   $('#mediaList').addEventListener('click', e => {
     const p = e.target.closest('[data-preview]'); if (!p) return;
     openPreview(p.dataset.preview, p.dataset.type, p.dataset.name);
-  });
-
-  // ---------------- Arsip ----------------
-  async function archiveCycle(c, archive) {
-    if (archive && !confirm('Arsipkan siklus "' + c.title + '"? Siklus akan dipindahkan ke menu Arsip.')) return;
-    try {
-      const d = await api('POST', '/cycles/' + c.id + '/' + (archive ? 'archive' : 'unarchive'));
-      state.current = d.cycle;
-      await loadCycles();
-      toast(archive ? 'Siklus diarsipkan' : 'Siklus dipulihkan', 'ok');
-      if (archive) navigate('arsip');
-      else { if (PHASE_VIEWS[state.view]) await renderPhaseView(state.view); else renderArsip(); }
-    } catch (ex) { toast(ex.message, 'err'); }
-  }
-  function renderArsip() {
-    const q = ($('#arsipSearch').value || '').toLowerCase();
-    let list = state.cycles.filter(c => c.archived);
-    if (q) list = list.filter(c => (c.title + ' ' + c.mapel + ' ' + c.sekolah + ' ' + c.kelas + ' ' + c.ownerName).toLowerCase().includes(q));
-    $('#arsipList').innerHTML = list.length ? list.map(arsipCard).join('') : emptyState('🗃️', 'Belum ada siklus yang diarsipkan.');
-  }
-  function arsipCard(c) {
-    const canRestore = state.user && (state.user.role === 'admin' || c.ownerId === state.user.id);
-    return `<div class="cycle-card st-${c.status} archived">
-      <div class="cycle-foot" style="margin:0"><span class="status-pill ${c.status}">${STATUS_LABEL[c.status]}</span><span class="badge-arsip">🗃️ Arsip</span></div>
-      <h4 data-open="${c.id}" style="cursor:pointer">${esc(c.title)}</h4>
-      <div class="cycle-meta">${c.mapel ? `<span>📚 ${esc(c.mapel)}</span>` : ''}${c.materi ? `<span>📖 ${esc(c.materi)}</span>` : ''}${c.kelas ? `<span>🎓 ${esc(c.kelas)}</span>` : ''}${c.sekolah ? `<span>🏫 ${esc(c.sekolah)}</span>` : ''}</div>
-      <div class="cycle-foot"><span class="tag owner">👤 ${esc(c.ownerName || '')}</span><span class="arsip-acts"><button type="button" class="btn btn-ghost btn-sm" data-open="${c.id}">Buka</button>${canRestore ? `<button type="button" class="btn btn-primary btn-sm" data-restore="${c.id}">♻️ Pulihkan</button>` : ''}</span></div>
-    </div>`;
-  }
-  $('#arsipSearch').addEventListener('input', renderArsip);
-  $('#arsipList').addEventListener('click', async e => {
-    const r = e.target.closest('[data-restore]'); if (!r) return;
-    e.stopPropagation();
-    const c = state.cycles.find(x => x.id === r.dataset.restore); if (!c) return;
-    await archiveCycle(c, false);
   });
 
   // ---------------- Users (admin) ----------------

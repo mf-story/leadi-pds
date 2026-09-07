@@ -180,10 +180,6 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .status-pill.see { background: var(--see); }
 .status-pill.selesai { background: var(--gold); }
 .badge-pub { font-size: .72rem; background: #fef6e0; color: var(--gold); padding: .12rem .5rem; border-radius: 20px; font-weight: 700; }
-.badge-arsip { font-size: .72rem; background: #eef2f6; color: var(--muted); padding: .12rem .5rem; border-radius: 20px; font-weight: 700; }
-.cycle-card.archived { opacity: .82; background: #fbfcfe; }
-.cycle-card.archived:hover { opacity: 1; }
-.arsip-acts { display: inline-flex; gap: .35rem; }
 /* Dokumen & Video (media library) */
 .media-list { display: flex; flex-direction: column; gap: .5rem; }
 .media-item { display: flex; align-items: center; gap: .7rem; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: .6rem .8rem; box-shadow: var(--shadow); }
