@@ -14,7 +14,7 @@
   const ROLE_LABEL = { admin: 'Admin Sistem', dosen: 'Dosen Pengawas', guru: 'Guru Model', observer: 'Guru Observer' };
   const STATUS_LABEL = { plan: 'Plan', do: 'Do', see: 'See', selesai: 'Selesai' };
 
-  const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', scopeFilter: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard', chat: { openWith: null, openName: '', pollTimer: null, badgeTimer: null, lastUnread: 0 } };
+  const state = { user: null, cycles: [], directory: [], schools: [], current: null, activeId: null, statusFilter: 'all', scopeFilter: 'all', mediaKind: 'all', selectedMembers: [], notifTimer: null, view: 'dashboard', chat: { openWith: null, openName: '', pollTimer: null, badgeTimer: null, lastUnread: 0 } };
 
   // ---------------- API ----------------
   function token() { return localStorage.getItem(TOKEN_KEY) || ''; }
@@ -216,6 +216,7 @@
     if (view === 'dashboard') renderDashboard();
     else if (isPhase) renderPhaseView(view);
     else if (view === 'repo') loadRepo();
+    else if (view === 'media') loadMedia();
     else if (view === 'arsip') renderArsip();
     else if (view === 'users') loadUsers();
     else if (view === 'schools') loadSchools();
@@ -1040,6 +1041,53 @@
     </div>`;
   }
   $('#repoSearch').addEventListener('input', renderRepo);
+
+  // ---------------- Dokumen & Video (semua siklus) ----------------
+  async function loadMedia() {
+    try { const d = await api('GET', '/media'); state._media = d.items || []; renderMedia(); }
+    catch (ex) { toast(ex.message, 'err'); }
+  }
+  function mediaIcon(m) {
+    if (m.kind === 'link') return '🔗';
+    const url = (m.url || '').toLowerCase(), t = (m.type || '').toLowerCase();
+    if (m.kind === 'video' || /\.(mp4|webm|ogg|mov)$/.test(url) || /^video\//.test(t)) return '🎬';
+    if (/\.pdf$/.test(url) || /pdf/.test(t)) return '📕';
+    if (/\.docx?$/.test(url) || /word/.test(t)) return '📘';
+    if (/\.xlsx?$/.test(url) || /sheet|excel/.test(t)) return '📗';
+    if (/\.(png|jpe?g|gif|webp)$/.test(url) || /image\//.test(t)) return '🖼️';
+    return '📄';
+  }
+  function renderMedia() {
+    const q = ($('#mediaSearch').value || '').toLowerCase();
+    const kind = state.mediaKind || 'all';
+    let list = state._media || [];
+    if (kind !== 'all') list = list.filter(m => m.kind === kind);
+    if (q) list = list.filter(m => (m.name + ' ' + m.cycleTitle).toLowerCase().includes(q));
+    if (!list.length) { $('#mediaList').innerHTML = emptyState('📁', 'Belum ada dokumen atau video.'); return; }
+    $('#mediaList').innerHTML = list.map(m => {
+      const dl = m.kind === 'link' ? '' : `<a class="file-dl" href="${esc(m.url)}" download="${esc(m.name)}" title="Unduh">⬇️</a>`;
+      const size = m.size ? `<span class="mi-size">${fmtSize(m.size)}</span>` : '';
+      return `<div class="media-item">
+        <span class="mi-ic">${mediaIcon(m)}</span>
+        <span class="mi-main">
+          <span class="mi-name" data-preview="${esc(m.url)}" data-type="${esc(m.type)}" data-name="${esc(m.name)}" title="Buka ${esc(m.name)}">${esc(m.name)}</span>
+          <span class="mi-sub">📁 ${esc(m.cycleTitle)} · <b class="mi-phase ${m.phase}">${esc(m.phaseLabel)}</b></span>
+        </span>
+        ${size}${dl}
+      </div>`;
+    }).join('');
+  }
+  $('#mediaSearch').addEventListener('input', renderMedia);
+  $('#mediaFilter').addEventListener('click', e => {
+    const chip = e.target.closest('[data-mkind]'); if (!chip) return;
+    state.mediaKind = chip.dataset.mkind;
+    $$('.scope-chip', $('#mediaFilter')).forEach(b => b.classList.toggle('active', b === chip));
+    renderMedia();
+  });
+  $('#mediaList').addEventListener('click', e => {
+    const p = e.target.closest('[data-preview]'); if (!p) return;
+    openPreview(p.dataset.preview, p.dataset.type, p.dataset.name);
+  });
 
   // ---------------- Arsip ----------------
   async function archiveCycle(c, archive) {

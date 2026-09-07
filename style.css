@@ -184,6 +184,18 @@ input:focus, textarea:focus, select:focus { outline: none; border-color: var(--a
 .cycle-card.archived { opacity: .82; background: #fbfcfe; }
 .cycle-card.archived:hover { opacity: 1; }
 .arsip-acts { display: inline-flex; gap: .35rem; }
+/* Dokumen & Video (media library) */
+.media-list { display: flex; flex-direction: column; gap: .5rem; }
+.media-item { display: flex; align-items: center; gap: .7rem; background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: .6rem .8rem; box-shadow: var(--shadow); }
+.media-item .mi-ic { font-size: 1.4rem; flex: 0 0 auto; }
+.media-item .mi-main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.media-item .mi-name { font-weight: 600; font-size: .92rem; color: var(--ink); cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.media-item .mi-name:hover { color: var(--accent); text-decoration: underline; }
+.media-item .mi-sub { font-size: .78rem; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.media-item .mi-phase { font-weight: 700; }
+.media-item .mi-phase.plan { color: var(--plan); } .media-item .mi-phase.do { color: var(--do); } .media-item .mi-phase.see { color: var(--see); }
+.media-item .mi-size { font-size: .75rem; color: var(--muted); flex: 0 0 auto; }
+.media-item .file-dl { text-decoration: none; font-size: 1rem; flex: 0 0 auto; }
 
 /* ---------- Panel (kartu isi) ---------- */
 .phase-layout { display: grid; grid-template-columns: 1fr 340px; gap: 1rem; align-items: start; }

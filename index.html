@@ -80,6 +80,7 @@
       <button class="topnav-tab" data-nav="do"><span>🎥</span> Do</button>
       <button class="topnav-tab" data-nav="see"><span>🔍</span> See</button>
       <button class="topnav-tab" data-nav="repo"><span>🗄️</span> Repository</button>
+      <button class="topnav-tab" data-nav="media"><span>📁</span> Dokumen</button>
       <button class="topnav-tab" data-nav="arsip"><span>🗃️</span> Arsip</button>
     </nav>
 
@@ -139,6 +140,22 @@
         <div id="repoList" class="cycle-grid"></div>
       </section>
 
+      <!-- DOKUMEN & VIDEO (semua siklus) -->
+      <section id="view-media" class="view" hidden>
+        <div class="page-head"><h2>Dokumen &amp; Video</h2></div>
+        <p class="muted">Kumpulan seluruh dokumen, video, dan tautan dari semua siklus dalam satu daftar.</p>
+        <div class="filter-bar">
+          <div class="scope-filter" id="mediaFilter">
+            <button type="button" class="scope-chip active" data-mkind="all">Semua</button>
+            <button type="button" class="scope-chip" data-mkind="doc">📄 Dokumen</button>
+            <button type="button" class="scope-chip" data-mkind="video">🎬 Video</button>
+            <button type="button" class="scope-chip" data-mkind="link">🔗 Tautan</button>
+          </div>
+          <input type="search" id="mediaSearch" placeholder="🔍 Cari nama berkas atau siklus…" />
+        </div>
+        <div id="mediaList" class="media-list"></div>
+      </section>
+
       <!-- ARSIP -->
       <section id="view-arsip" class="view" hidden>
         <div class="page-head"><h2>Arsip Siklus</h2></div>
@@ -189,6 +206,7 @@
         <button data-nav="do"><span>🎥</span> Do</button>
         <button data-nav="see"><span>🔍</span> See</button>
         <button data-nav="repo"><span>🗄️</span> Repository</button>
+        <button data-nav="media"><span>📁</span> Dokumen</button>
         <button data-nav="arsip"><span>🗃️</span> Arsip</button>
         <hr />
         <button id="drawerNewCycle"><span>➕</span> Siklus Baru</button>

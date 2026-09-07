@@ -897,6 +897,43 @@ async function handleApi(req, res, url) {
     return sendJSON(res, 200, { cycles: list });
   }
 
+  // ================= DAFTAR DOKUMEN & VIDEO (semua siklus) =================
+  if (seg[0] === 'media' && method === 'GET') {
+    const items = [];
+    const phaseLabel = { plan: 'Plan', do: 'Do', see: 'See' };
+    const push = (c, phaseKey, kind, a) => {
+      if (!a || (!a.url)) return;
+      items.push({
+        cycleId: c.id, cycleTitle: c.title, phase: phaseKey, phaseLabel: phaseLabel[phaseKey],
+        kind, id: a.id, name: a.name || a.title || a.url, url: a.url, type: a.type || '',
+        size: a.size || 0, uploaderName: a.uploaderName || '', at: a.uploadedAt || a.createdAt || c.updatedAt || 0
+      });
+    };
+    const pushLink = (c, phaseKey, v) => {
+      if (!v || !v.url) return;
+      items.push({
+        cycleId: c.id, cycleTitle: c.title, phase: phaseKey, phaseLabel: phaseLabel[phaseKey],
+        kind: 'link', id: v.id, name: v.title || v.url, url: v.url, type: 'video-link', size: 0, uploaderName: '', at: 0
+      });
+    };
+    for (const c of DB.cycles.filter(x => canView(me, x))) {
+      const p = c.plan || {}, d = c.pelaksanaan || {}, s = c.refleksi || {};
+      (p.attachments || []).forEach(a => push(c, 'plan', 'doc', a));
+      (p.observerDocs || []).forEach(a => push(c, 'plan', 'doc', a));
+      (p.videoLinks || []).forEach(v => pushLink(c, 'plan', v));
+      (d.videos || []).forEach(a => push(c, 'do', 'video', a));
+      (d.observasiDocs || []).forEach(a => push(c, 'do', 'doc', a));
+      (d.observerDocs || []).forEach(a => push(c, 'do', 'doc', a));
+      (d.videoLinks || []).forEach(v => pushLink(c, 'do', v));
+      (s.videos || []).forEach(a => push(c, 'see', 'video', a));
+      (s.perangkatDocs || []).forEach(a => push(c, 'see', 'doc', a));
+      (s.observerDocs || []).forEach(a => push(c, 'see', 'doc', a));
+      (s.videoLinks || []).forEach(v => pushLink(c, 'see', v));
+    }
+    items.sort((a, b) => (b.at || 0) - (a.at || 0) || String(a.cycleTitle).localeCompare(String(b.cycleTitle)));
+    return sendJSON(res, 200, { items });
+  }
+
   // ================= STATISTIK RINGKAS (dasbor) =================
   if (seg[0] === 'stats' && method === 'GET') {
     const visible = DB.cycles.filter(c => canView(me, c));
