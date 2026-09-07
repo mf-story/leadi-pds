@@ -1327,6 +1327,8 @@
   $('#notifBtn').addEventListener('click', async () => {
     const panel = $('#notifPanel'); if (!panel.hidden) { panel.hidden = true; return; }
     await loadNotifications(true); panel.hidden = false;
+    // Membuka lonceng = menandai semua notifikasi terbaca (badge langsung hilang)
+    try { await api('POST', '/notifications/read', {}); const badge = $('#notifBadge'); if (badge) badge.hidden = true; } catch {}
   });
   $('#notifReadAll').addEventListener('click', async () => { try { await api('POST', '/notifications/read', {}); await loadNotifications(); } catch {} });
   document.addEventListener('click', e => { const panel = $('#notifPanel'); if (!panel.hidden && !e.target.closest('#notifPanel') && !e.target.closest('#notifBtn')) panel.hidden = true; });
