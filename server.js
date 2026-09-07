@@ -892,7 +892,7 @@ async function handleApi(req, res, url) {
     const push = (c, phaseKey, kind, a) => {
       if (!a || (!a.url)) return;
       items.push({
-        cycleId: c.id, cycleTitle: c.title, phase: phaseKey, phaseLabel: phaseLabel[phaseKey],
+        cycleId: c.id, cycleTitle: c.title, owner: c.ownerName || '', phase: phaseKey, phaseLabel: phaseLabel[phaseKey],
         kind, id: a.id, name: a.name || a.title || a.url, url: a.url, type: a.type || '',
         size: a.size || 0, uploaderName: a.uploaderName || '', at: a.uploadedAt || a.createdAt || c.updatedAt || 0
       });
@@ -900,7 +900,7 @@ async function handleApi(req, res, url) {
     const pushLink = (c, phaseKey, v) => {
       if (!v || !v.url) return;
       items.push({
-        cycleId: c.id, cycleTitle: c.title, phase: phaseKey, phaseLabel: phaseLabel[phaseKey],
+        cycleId: c.id, cycleTitle: c.title, owner: c.ownerName || '', phase: phaseKey, phaseLabel: phaseLabel[phaseKey],
         kind: 'link', id: v.id, name: v.title || v.url, url: v.url, type: 'video-link', size: 0, uploaderName: '', at: 0
       });
     };

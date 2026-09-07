@@ -1066,7 +1066,7 @@
         <span class="mi-ic">${mediaIcon(m)}</span>
         <span class="mi-main">
           <span class="mi-name" data-preview="${esc(m.url)}" data-type="${esc(m.type)}" data-name="${esc(m.name)}" title="Buka ${esc(m.name)}">${esc(m.name)}</span>
-          <span class="mi-sub">📁 ${esc(m.cycleTitle)} · <b class="mi-phase ${m.phase}">${esc(m.phaseLabel)}</b></span>
+          <span class="mi-sub">📁 ${esc(m.cycleTitle)} · <b class="mi-phase ${m.phase}">${esc(m.phaseLabel)}</b>${m.owner ? ` · 👤 ${esc(m.owner)}` : ''}</span>
         </span>
         ${size}${dl}
       </div>`;
