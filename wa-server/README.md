@@ -43,10 +43,29 @@ Jika `WA_API_URL` kosong, LeaDi-PDS jalan normal tanpa kirim WA.
 
 ## Deploy di VPS (Coolify/Docker)
 
-whatsapp-web.js butuh Chromium. Contoh env untuk memakai Chromium sistem:
+whatsapp-web.js butuh Chromium. Sudah disediakan **Dockerfile** (base Debian + Chromium).
 
-```
-PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium
-```
+### Langkah di Coolify
 
-Pastikan folder `.wwebjs_auth/` dipetakan ke **persistent storage** agar sesi tidak hilang saat redeploy.
+1. **New Resource → Application** dari repo GitHub `leadi-pds`.
+2. **Build Pack: Dockerfile**, dan set **Base Directory / Dockerfile location** ke folder `wa-server` (agar `wa-server/Dockerfile` yang dipakai).
+3. **Port**: `3010` (Ports Exposes = `3010`).
+4. **Environment variables** (opsional):
+   - `WA_API_KEY` — bila ingin mengamankan endpoint `/send`.
+   - `PUPPETEER_EXECUTABLE_PATH` — sudah default `/usr/bin/chromium` di image.
+5. **Persistent Storage** — WAJIB agar tidak scan ulang tiap redeploy:
+   - Destination Path: `/app/.wwebjs_auth`
+6. Beri **domain** (mis. `wa.lessonstudy.online`) atau akses lewat IP:port.
+7. Deploy → buka `https://wa.domain/qr` → **scan** dengan WhatsApp.
+
+### Sambungkan ke LeaDi-PDS
+
+Pada aplikasi **LeaDi-PDS** di Coolify, set env:
+
+- `WA_API_URL` = `https://wa.domain/send` (atau `http://<nama-service>:3010/send` bila satu jaringan Coolify)
+- `WA_ADMIN_NUMBER` = `6282345779247`
+- `WA_API_KEY` = (samakan bila diaktifkan di gateway)
+
+Lalu **Redeploy** LeaDi-PDS.
+
+> Catatan: container jalan sebagai root dengan `--no-sandbox` (sudah diatur). Pastikan Persistent Storage `/app/.wwebjs_auth` aktif agar sesi WhatsApp bertahan.
