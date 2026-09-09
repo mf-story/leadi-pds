@@ -7,6 +7,7 @@
 'use strict';
 
 const http = require('http');
+const https = require('https');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
@@ -21,6 +22,28 @@ const DB_FILE = path.join(DATA_DIR, 'db.json');
 const SEED_DIR = path.join(ROOT, 'seed');
 const MAX_BODY = 300 * 1024 * 1024; // 300 MB (menampung berkas 200 MB dalam base64)
 const MAX_FILE = 200 * 1024 * 1024; // 200 MB per berkas (video pembelajaran)
+
+// --- Notifikasi WhatsApp (opsional; lewat WA gateway di wa-server/) ---
+const WA_API_URL = process.env.WA_API_URL || '';                 // mis. http://127.0.0.1:3010/send
+const WA_API_KEY = process.env.WA_API_KEY || '';                 // opsional (Authorization: Bearer ...)
+const WA_ADMIN_NUMBER = process.env.WA_ADMIN_NUMBER || '6282345779247'; // boleh beberapa, dipisah koma
+function sendWhatsApp(number, message) {
+  if (!WA_API_URL || !number) return;
+  try {
+    const u = new URL(WA_API_URL);
+    const lib = u.protocol === 'https:' ? https : http;
+    const payload = JSON.stringify({ number: String(number), message: String(message) });
+    const headers = { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(payload) };
+    if (WA_API_KEY) headers['Authorization'] = 'Bearer ' + WA_API_KEY;
+    const req = lib.request({ method: 'POST', hostname: u.hostname, port: u.port || (u.protocol === 'https:' ? 443 : 80), path: u.pathname + u.search, headers, timeout: 15000 }, r => r.resume());
+    req.on('error', e => console.error('[WA] gagal kirim:', e.message));
+    req.on('timeout', () => req.destroy());
+    req.write(payload); req.end();
+  } catch (e) { console.error('[WA] error:', e.message); }
+}
+function notifyAdminsWhatsApp(message) {
+  WA_ADMIN_NUMBER.split(',').map(s => s.trim()).filter(Boolean).forEach(n => sendWhatsApp(n, message));
+}
 
 // ------------------------------------------------------------------
 // Password (scrypt) & id
@@ -468,6 +491,7 @@ async function handleApi(req, res, url) {
     });
     const adminIds = DB.users.filter(u => u.role === 'admin').map(u => u.id);
     notify(adminIds, null, null, `Permintaan akun baru: ${nama} (@${username}) sebagai ${role === 'dosen' ? 'Dosen' : 'Guru'}. Tinjau di Kelola Pengguna.`, 'users');
+    notifyAdminsWhatsApp(`🔔 *LeaDi-PDS* — Permintaan Akun Baru\n\n👤 Nama: ${nama}\n🆔 Username: @${username}\n🎓 Peran: ${role === 'dosen' ? 'Dosen' : 'Guru'}${email ? `\n✉️ Email: ${email}` : ''}${str(body.instansi, 160) ? `\n🏫 Instansi: ${str(body.instansi, 160)}` : ''}\n\nTinjau & setujui di menu *Kelola Pengguna*.`);
     saveDB();
     return sendJSON(res, 200, { ok: true });
   }
