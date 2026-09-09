@@ -154,7 +154,8 @@
     const payload = {
       nama: $('#rNama').value, role: $('#rRole').value,
       username: $('#rUsername').value.toLowerCase().replace(/[^a-z0-9._-]/g, ''),
-      email: $('#rEmail').value.trim(), password: $('#rPassword').value, instansi: $('#rInstansi').value
+      email: $('#rEmail').value.trim(), password: $('#rPassword').value, instansi: $('#rInstansi').value,
+      nohp: ($('#rNohp') && $('#rNohp').value.trim()) || ''
     };
     try {
       await api('POST', '/register', payload);
@@ -189,7 +190,7 @@
     setPhotoPreview($('#accPhotoPreview'), u.photoUrl || '', u.nama);
     $('#accName').textContent = u.nama;
     const rt = $('#accRole'); rt.textContent = ROLE_LABEL[u.role]; rt.className = 'role-tag ' + u.role;
-    $('#accNameInput').value = u.nama; $('#accJabatan').value = u.jabatan || ''; $('#accInstansi').value = u.instansi || ''; $('#accEmail').value = u.email || '';
+    $('#accNameInput').value = u.nama; $('#accJabatan').value = u.jabatan || ''; $('#accInstansi').value = u.instansi || ''; $('#accEmail').value = u.email || ''; if ($('#accNohp')) $('#accNohp').value = u.nohp || '';
   }
   // Avatar dgn ikon inisial di dalam span, foto sbg background pada tombol
   function setAvatarEl(btn, span, u) {
@@ -1095,7 +1096,7 @@
     $('#reqBadge').textContent = list.length ? list.length : '';
     $('#requestList').innerHTML = list.map(r => `
       <div class="user-item"><div class="u-ava">${initials(r.nama)}</div>
-        <div class="u-main"><b>${esc(r.nama)} <span class="role-tag ${r.role}">${ROLE_LABEL[r.role]}</span></b><div class="u-sub">@${esc(r.username)}${r.email ? ' · ✉ ' + esc(r.email) : ''}${r.instansi ? ' · ' + esc(r.instansi) : ''}</div></div>
+        <div class="u-main"><b>${esc(r.nama)} <span class="role-tag ${r.role}">${ROLE_LABEL[r.role]}</span></b><div class="u-sub">@${esc(r.username)}${r.email ? ' · ✉ ' + esc(r.email) : ''}${r.nohp ? ' · 📱 ' + esc(r.nohp) : ''}${r.instansi ? ' · ' + esc(r.instansi) : ''}</div></div>
         <div class="u-actions"><button class="btn btn-primary btn-sm" data-approvereq="${r.id}">✓ Setujui</button><button class="btn btn-danger btn-sm" data-rejectreq="${r.id}">✕ Tolak</button></div>
       </div>`).join('');
   }
@@ -1132,7 +1133,7 @@
     $('#uUsername').value = u ? u.username : ''; $('#uUsername').disabled = !!u;
     $('#uPassword').value = ''; $('#uPassword').placeholder = u ? 'kosongkan bila tetap' : 'min. 4 karakter';
     $('#uJabatan').value = u ? (u.jabatan || '') : ''; $('#uInstansi').value = u ? (u.instansi || '') : '';
-    $('#uEmail').value = u ? (u.email || '') : '';
+    $('#uEmail').value = u ? (u.email || '') : ''; if ($('#uNohp')) $('#uNohp').value = u ? (u.nohp || '') : '';
     $('#uNip').value = u ? (u.nip || '') : ''; $('#uNuptk').value = u ? (u.nuptk || '') : ''; $('#uNidn').value = u ? (u.nidn || '') : '';
     updateUserRoleFields();
     userPhoto = { data: null, remove: false };
@@ -1166,6 +1167,7 @@
     const payload = { nama: $('#uNama').value, role: $('#uRole').value, jabatan: $('#uJabatan').value, instansi: $('#uInstansi').value };
     const role = $('#uRole').value;
     payload.email = role === 'admin' ? '' : $('#uEmail').value.trim();
+    payload.nohp = ($('#uNohp') && $('#uNohp').value.trim()) || '';
     payload.nip = (role === 'guru' || role === 'observer' || role === 'dosen') ? $('#uNip').value : '';
     payload.nuptk = (role === 'guru' || role === 'observer') ? $('#uNuptk').value : '';
     payload.nidn = role === 'dosen' ? $('#uNidn').value : '';
@@ -1300,7 +1302,7 @@
   });
   $('#profileForm').addEventListener('submit', async e => {
     e.preventDefault();
-    const payload = { nama: $('#accNameInput').value, jabatan: $('#accJabatan').value, instansi: $('#accInstansi').value, email: $('#accEmail').value.trim() };
+    const payload = { nama: $('#accNameInput').value, jabatan: $('#accJabatan').value, instansi: $('#accInstansi').value, email: $('#accEmail').value.trim(), nohp: ($('#accNohp') && $('#accNohp').value.trim()) || '' };
     if (accPhoto.data) payload.photo = accPhoto.data; else if (accPhoto.remove) payload.removePhoto = true;
     try {
       const d = await api('PUT', '/me', payload);

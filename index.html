@@ -297,6 +297,7 @@
           <label>Jabatan <input type="text" id="accJabatan" maxlength="150" placeholder="mis. Guru Matematika" /></label>
           <label>Instansi <input type="text" id="accInstansi" list="schoolOptions" maxlength="160" placeholder="mis. SMPN 1 Makassar" /></label>
           <label>Email <input type="email" id="accEmail" maxlength="160" placeholder="nama@contoh.com" /></label>
+          <label>No. WhatsApp <input type="tel" id="accNohp" maxlength="30" placeholder="mis. 08123456789" /></label>
           <button type="submit" class="btn btn-primary btn-sm">Simpan profil</button>
         </form>
         <hr />
@@ -339,6 +340,7 @@
         </div>
         <div class="grid-2" id="uEmailRow">
           <label>Email <input type="email" id="uEmail" maxlength="160" placeholder="nama@contoh.com" /></label>
+          <label>No. WhatsApp <input type="tel" id="uNohp" maxlength="30" placeholder="mis. 08123456789" /></label>
         </div>
         <div class="grid-2" id="uIdRow">
           <label id="uNipWrap">NIP <input type="text" id="uNip" maxlength="40" inputmode="numeric" /></label>
@@ -366,6 +368,9 @@
         </div>
         <div class="grid-2">
           <label>Kata sandi * <input type="password" id="rPassword" placeholder="min. 4 karakter" /></label>
+          <label>No. WhatsApp <input type="tel" id="rNohp" maxlength="30" placeholder="mis. 08123456789" /></label>
+        </div>
+        <div class="grid-2">
           <label id="rOrgLabel">Sekolah <input type="text" id="rInstansi" list="schoolOptions" maxlength="160" placeholder="pilih atau ketik sekolah…" /></label>
         </div>
         <p id="registerError" class="form-error" hidden></p>

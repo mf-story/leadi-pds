@@ -44,6 +44,13 @@ function sendWhatsApp(number, message) {
 function notifyAdminsWhatsApp(message) {
   WA_ADMIN_NUMBER.split(',').map(s => s.trim()).filter(Boolean).forEach(n => sendWhatsApp(n, message));
 }
+// Kirim WA ke anggota (guru/observer/dosen) yang baru ditambahkan ke siklus.
+function notifyMembersAddedWhatsApp(cycle, addedIds, actorName) {
+  (addedIds || []).forEach(id => {
+    const u = DB.users.find(x => x.id === id);
+    if (u && u.nohp) sendWhatsApp(u.nohp, `📌 *LeaDi-PDS* — Ditambahkan ke Siklus\n\nHalo ${u.nama}, Anda ditambahkan${actorName ? ` oleh ${actorName}` : ''} ke siklus *"${cycle.title}"*.\n\nBuka https://lessonstudy.online untuk melihat & berkolaborasi.`);
+  });
+}
 
 // ------------------------------------------------------------------
 // Password (scrypt) & id
@@ -486,12 +493,13 @@ async function handleApi(req, res, url) {
     DB.accountRequests.push({
       id: uid('req'), username, nama, role, email,
       jabatan: str(body.jabatan, 150), instansi: str(body.instansi, 160),
+      nohp: str(body.nohp, 30),
       nip: str(body.nip, 40), nuptk: str(body.nuptk, 40), nidn: str(body.nidn, 40),
       password: hashPassword(password), createdAt: new Date().toISOString()
     });
     const adminIds = DB.users.filter(u => u.role === 'admin').map(u => u.id);
     notify(adminIds, null, null, `Permintaan akun baru: ${nama} (@${username}) sebagai ${role === 'dosen' ? 'Dosen' : 'Guru'}. Tinjau di Kelola Pengguna.`, 'users');
-    notifyAdminsWhatsApp(`🔔 *LeaDi-PDS* — Permintaan Akun Baru\n\n👤 Nama: ${nama}\n🆔 Username: @${username}\n🎓 Peran: ${role === 'dosen' ? 'Dosen' : 'Guru'}${email ? `\n✉️ Email: ${email}` : ''}${str(body.instansi, 160) ? `\n🏫 Instansi: ${str(body.instansi, 160)}` : ''}\n\nTinjau & setujui di menu *Kelola Pengguna*.`);
+    notifyAdminsWhatsApp(`🔔 *LeaDi-PDS* — Permintaan Akun Baru\n\n👤 Nama: ${nama}\n🆔 Username: @${username}\n🎓 Peran: ${role === 'dosen' ? 'Dosen' : 'Guru'}${email ? `\n✉️ Email: ${email}` : ''}${str(body.nohp, 30) ? `\n📱 WA: ${str(body.nohp, 30)}` : ''}${str(body.instansi, 160) ? `\n🏫 Instansi: ${str(body.instansi, 160)}` : ''}\n\nTinjau & setujui di menu *Kelola Pengguna*.`);
     saveDB();
     return sendJSON(res, 200, { ok: true });
   }
@@ -534,6 +542,7 @@ async function handleApi(req, res, url) {
     if (body.jabatan != null) me.jabatan = str(body.jabatan, 150);
     if (body.instansi != null) me.instansi = str(body.instansi, 160);
     if (body.email != null) me.email = str(body.email, 160);
+    if (body.nohp != null) me.nohp = str(body.nohp, 30);
     if (body.nip != null) me.nip = str(body.nip, 40);
     if (body.nuptk != null) me.nuptk = str(body.nuptk, 40);
     if (body.nidn != null) me.nidn = str(body.nidn, 40);
@@ -653,6 +662,7 @@ async function handleApi(req, res, url) {
       c.pelaksanaan.observasiDocs = processAttachments((body.pelaksanaan || {}).observasiDocs, []);
       DB.cycles.push(c);
       notify(c.memberIds, me, c, `Anda ditambahkan pada siklus "${c.title}".`);
+      notifyMembersAddedWhatsApp(c, c.memberIds, me.nama);
       saveDB();
       return sendJSON(res, 200, { cycle: c });
     }
@@ -685,6 +695,7 @@ async function handleApi(req, res, url) {
       existing.refleksi.perangkatDocs = processAttachments((body.refleksi || {}).perangkatDocs, oldReflPerangkat);
       const added = (existing.memberIds || []).filter(id => !prevMembers.includes(id));
       if (added.length) notify(added, me, existing, `Anda ditambahkan pada siklus "${existing.title}".`);
+      if (added.length) notifyMembersAddedWhatsApp(existing, added, me.nama);
       saveDB();
       return sendJSON(res, 200, { cycle: enrichCycle(existing) });
     }
@@ -740,6 +751,7 @@ async function handleApi(req, res, url) {
       if (!c.memberIds.includes(r.userId)) c.memberIds.push(r.userId);
       c.updatedAt = Date.now();
       notify([r.userId], me, c, `Permintaan Anda bergabung pada siklus "${c.title}" diterima.`);
+      notifyMembersAddedWhatsApp(c, [r.userId], me.nama);
       saveDB();
       return sendJSON(res, 200, { cycle: enrichCycle(c) });
     }
@@ -1039,6 +1051,7 @@ async function handleApi(req, res, url) {
       if (DB.users.some(u => u.username.toLowerCase() === username)) return sendJSON(res, 400, { error: 'Username sudah dipakai' });
       const u = { id: uid('usr'), username, nama, jabatan, instansi, role, password: hashPassword(password), photoUrl: '', createdAt: new Date().toISOString() };
       u.email = str(body.email, 160);
+      u.nohp = str(body.nohp, 30);
       u.nip = str(body.nip, 40); u.nuptk = str(body.nuptk, 40); u.nidn = str(body.nidn, 40);
       processUserPhoto(u, body);
       DB.users.push(u);
@@ -1053,6 +1066,7 @@ async function handleApi(req, res, url) {
       if (body.jabatan != null) u.jabatan = str(body.jabatan, 150);
       if (body.instansi != null) u.instansi = str(body.instansi, 160);
       if (body.email != null) u.email = str(body.email, 160);
+      if (body.nohp != null) u.nohp = str(body.nohp, 30);
       if (body.nip != null) u.nip = str(body.nip, 40);
       if (body.nuptk != null) u.nuptk = str(body.nuptk, 40);
       if (body.nidn != null) u.nidn = str(body.nidn, 40);
@@ -1095,11 +1109,12 @@ async function handleApi(req, res, url) {
       const u = {
         id: uid('usr'), username: r.username, nama: r.nama, jabatan: r.jabatan || '',
         instansi: r.instansi || '', role: r.role === 'guru' ? 'observer' : r.role, email: r.email || '', password: r.password,
-        photoUrl: '', nip: r.nip || '', nuptk: r.nuptk || '', nidn: r.nidn || '', createdAt: new Date().toISOString()
+        photoUrl: '', nohp: r.nohp || '', nip: r.nip || '', nuptk: r.nuptk || '', nidn: r.nidn || '', createdAt: new Date().toISOString()
       };
       DB.users.push(u);
       DB.accountRequests.splice(idx, 1);
       notify([u.id], null, null, 'Selamat datang! Akun Anda telah disetujui admin. Anda kini dapat menggunakan LeaDi-PDS.');
+      if (r.nohp) sendWhatsApp(r.nohp, `✅ *LeaDi-PDS* — Akun Disetujui\n\nHalo ${r.nama}, akun Anda sudah *disetujui* admin.\n🆔 Username: @${r.username}\n\nSilakan masuk di https://lessonstudy.online untuk mulai menggunakan LeaDi-PDS.`);
       saveDB();
       return sendJSON(res, 200, { user: publicUser(u) });
     }
