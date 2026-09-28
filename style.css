@@ -81,8 +81,7 @@ hr { border: none; border-top: 1px solid var(--line); margin: 1rem 0; }
 .btn-signin:active { transform: translateY(0); }
 .login-or { display: flex; align-items: center; gap: .7rem; margin: 1.1rem 0 .8rem; color: rgba(255, 255, 255, .6); font-size: .78rem; }
 .login-or::before, .login-or::after { content: ""; flex: 1; height: 1px; background: rgba(255, 255, 255, .22); }
-.login-alt { text-align: center; font-size: .84rem; color: rgba(255, 255, 255, .78); margin: 0; }
-.link-btn { background: none; border: none; padding: 0; color: #bce0ff; font-weight: 700; font-size: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+.login-alt { text-align: center; font-size: .84rem; color: rgba(255, 255, 255, .78); margin: 0; }  .login-forgot { text-align: center; margin: .1rem 0 0; }.link-btn { background: none; border: none; padding: 0; color: #bce0ff; font-weight: 700; font-size: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
 .link-btn:hover { color: #fff; }
 input:focus, textarea:focus, select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(47, 111, 237, .14); }
 .login-demo { font-size: .78rem; color: var(--muted); margin-top: 1rem; }

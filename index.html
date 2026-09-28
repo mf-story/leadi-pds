@@ -50,6 +50,7 @@
         <p id="loginError" class="form-error" hidden></p>
         <button type="submit" class="btn-signin">Sign in</button>
       </form>
+      <p class="login-forgot"><button type="button" id="showResetBtn" class="link-btn">Lupa kata sandi?</button></p>
       <div class="login-or"><span>atau</span></div>
       <p class="login-alt">Belum punya akun? <button type="button" id="showRegisterBtn" class="link-btn">Ajukan gratis</button></p>
     </div>
@@ -161,6 +162,11 @@
         <div id="requestsSection" hidden>
           <h3 style="margin:.2rem 0 .6rem">📩 Permintaan Akun <span id="reqBadge" class="req-badge"></span></h3>
           <div id="requestList" class="user-list"></div>
+          <hr style="margin:1rem 0" />
+        </div>
+        <div id="resetSection" hidden>
+          <h3 style="margin:.2rem 0 .6rem">🔑 Permintaan Reset Sandi <span id="resetBadge" class="req-badge"></span></h3>
+          <div id="resetList" class="user-list"></div>
           <hr style="margin:1rem 0" />
         </div>
         <div id="userList" class="user-list"></div>
@@ -349,6 +355,18 @@
         </div>
         <p id="userError" class="form-error" hidden></p>
         <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="userModal">Batal</button><button type="submit" class="btn btn-primary">Simpan</button></div>
+      </form>
+    </div>
+  </div>
+
+  <div id="resetRequestModal" class="modal-overlay" hidden>
+    <div class="modal">
+      <div class="modal-head"><h3>Reset Kata Sandi</h3><button class="close-btn" data-close="resetRequestModal">✕</button></div>
+      <form id="resetRequestForm" class="modal-body">
+        <p class="muted" style="margin-top:0">Masukkan <b>username</b> Anda. Permintaan akan dikirim ke admin. Setelah diproses, kata sandi baru dikirim ke <b>WhatsApp</b> Anda.</p>
+        <label>Username <input type="text" id="rsUsername" maxlength="30" placeholder="username akun Anda" /></label>
+        <p id="resetError" class="form-error" hidden></p>
+        <div class="modal-actions"><button type="button" class="btn btn-ghost" data-close="resetRequestModal">Batal</button><button type="submit" class="btn btn-primary">Kirim Permintaan</button></div>
       </form>
     </div>
   </div>

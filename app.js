@@ -134,6 +134,20 @@
   });
   // Ajukan akun (guru/dosen) → menunggu persetujuan admin
   $('#showRegisterBtn').addEventListener('click', async () => { $('#registerForm').reset(); $('#registerError').hidden = true; await loadPublicOptions(); updateRegisterOrgField(); $('#registerModal').hidden = false; });
+  // Lupa kata sandi → kirim permintaan reset ke admin
+  const showResetBtn = $('#showResetBtn');
+  if (showResetBtn) showResetBtn.addEventListener('click', () => { $('#resetRequestForm').reset(); $('#resetError').hidden = true; $('#resetRequestModal').hidden = false; });
+  const resetReqForm = $('#resetRequestForm');
+  if (resetReqForm) resetReqForm.addEventListener('submit', async e => {
+    e.preventDefault(); const err = $('#resetError'); err.hidden = true;
+    const username = $('#rsUsername').value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
+    if (!username) { err.textContent = 'Isi username Anda'; err.hidden = false; return; }
+    try {
+      await api('POST', '/reset-request', { username });
+      $('#resetRequestModal').hidden = true;
+      toast('Permintaan reset terkirim ke admin. Kata sandi baru akan dikirim ke WhatsApp Anda.', 'ok');
+    } catch (ex) { err.textContent = ex.message; err.hidden = false; }
+  });
   $('#rRole').addEventListener('change', updateRegisterOrgField);
   function updateRegisterOrgField() {
     const isDosen = $('#rRole').value === 'dosen';
@@ -1086,10 +1100,28 @@
   });
 
   // ---------------- Users (admin) ----------------
-  async function loadUsers() { try { const d = await api('GET', '/users'); state._users = d.users; renderUsers(); } catch (ex) { toast(ex.message, 'err'); } loadAccountRequests(); }
+  async function loadUsers() { try { const d = await api('GET', '/users'); state._users = d.users; renderUsers(); } catch (ex) { toast(ex.message, 'err'); } loadAccountRequests(); loadResetRequests(); }
   async function loadAccountRequests() {
     try { const d = await api('GET', '/account-requests'); state._requests = d.requests; renderRequests(); } catch {}
   }
+  async function loadResetRequests() {
+    try { const d = await api('GET', '/reset-requests'); state._resets = d.requests; renderResetRequests(); } catch {}
+  }
+  function renderResetRequests() {
+    const list = state._resets || [];
+    $('#resetSection').hidden = !list.length;
+    $('#resetBadge').textContent = list.length ? list.length : '';
+    $('#resetList').innerHTML = list.map(r => `
+      <div class="user-item"><div class="u-ava">${initials(r.nama)}</div>
+        <div class="u-main"><b>${esc(r.nama)}</b><div class="u-sub">@${esc(r.username)}${r.nohp ? ' · 📱 ' + esc(r.nohp) : ' · (tanpa nomor WA)'}</div></div>
+        <div class="u-actions"><button class="btn btn-primary btn-sm" data-approvereset="${r.id}">🔑 Reset sandi</button><button class="btn btn-ghost btn-sm" data-rejectreset="${r.id}">Abaikan</button></div>
+      </div>`).join('');
+  }
+  $('#resetList').addEventListener('click', async e => {
+    const ap = e.target.closest('[data-approvereset]'); const rj = e.target.closest('[data-rejectreset]');
+    if (ap) { if (!confirm('Reset kata sandi pengguna ini ke default?')) return; try { const d = await api('POST', '/reset-requests/' + ap.dataset.approvereset + '/approve'); toast(d.hasWa ? 'Sandi direset. WA terkirim ke pengguna.' : ('Sandi direset ke: ' + d.defaultPassword + ' (pengguna tanpa WA — beri tahu manual)'), 'ok'); await loadResetRequests(); } catch (ex) { toast(ex.message, 'err'); } }
+    if (rj) { if (!confirm('Abaikan & hapus permintaan reset ini?')) return; try { await api('DELETE', '/reset-requests/' + rj.dataset.rejectreset); await loadResetRequests(); } catch (ex) { toast(ex.message, 'err'); } }
+  });
   function renderRequests() {
     const list = state._requests || [];
     $('#requestsSection').hidden = !list.length;
@@ -1109,7 +1141,7 @@
     $('#userList').innerHTML = (state._users || []).map(u => `
       <div class="user-item"><div class="u-ava">${u.photoUrl ? `<img src="${esc(u.photoUrl)}" alt="">` : initials(u.nama)}</div>
         <div class="u-main"><b>${esc(u.nama)} <span class="role-tag ${u.role}">${ROLE_LABEL[u.role]}</span></b><div class="u-sub">@${esc(u.username)}${u.jabatan ? ' · ' + esc(u.jabatan) : ''}${u.instansi ? ' · ' + esc(u.instansi) : ''}${u.email ? ' · ✉ ' + esc(u.email) : ''}${u.nip ? ' · NIP ' + esc(u.nip) : ''}${u.nuptk ? ' · NUPTK ' + esc(u.nuptk) : ''}${u.nidn ? ' · NIDN ' + esc(u.nidn) : ''}</div></div>
-        <div class="u-actions"><button class="btn btn-ghost btn-sm" data-edituser="${u.id}">✎</button>${u.id !== state.user.id ? `<button class="btn btn-danger btn-sm" data-deluser="${u.id}">🗑</button>` : ''}</div>
+        <div class="u-actions"><button class="btn btn-ghost btn-sm" data-edituser="${u.id}">✎</button><button class="btn btn-ghost btn-sm" data-resetuser="${u.id}" title="Reset kata sandi">🔑</button>${u.id !== state.user.id ? `<button class="btn btn-danger btn-sm" data-deluser="${u.id}">🗑</button>` : ''}</div>
       </div>`).join('');
   }
   $('#newUserBtn').addEventListener('click', () => openUserForm(null));
@@ -1156,10 +1188,16 @@
     $('#uPhotoRemove').hidden = true; $('#uPhotoInput').value = '';
   });
   $('#userList').addEventListener('click', e => {
-    const ed = e.target.closest('[data-edituser]'); const del = e.target.closest('[data-deluser]');
+    const ed = e.target.closest('[data-edituser]'); const del = e.target.closest('[data-deluser]'); const rst = e.target.closest('[data-resetuser]');
     if (ed) openUserForm((state._users || []).find(u => u.id === ed.dataset.edituser));
     if (del) delUser(del.dataset.deluser);
+    if (rst) resetUserPassword(rst.dataset.resetuser);
   });
+  async function resetUserPassword(id) {
+    const u = (state._users || []).find(x => x.id === id);
+    if (!confirm('Reset kata sandi ' + (u ? u.nama : 'pengguna ini') + ' ke default?')) return;
+    try { const d = await api('POST', '/users/' + id + '/reset-password'); toast(d.hasWa ? 'Sandi direset. WA terkirim ke pengguna.' : ('Sandi direset ke: ' + d.defaultPassword + ' (pengguna tanpa WA — beri tahu manual)'), 'ok'); await loadResetRequests(); } catch (ex) { toast(ex.message, 'err'); }
+  }
   async function delUser(id) { if (!confirm('Hapus pengguna ini?')) return; try { await api('DELETE', '/users/' + id); await loadUsers(); toast('Pengguna dihapus', 'ok'); } catch (ex) { toast(ex.message, 'err'); } }
   $('#userForm').addEventListener('submit', async e => {
     e.preventDefault(); const err = $('#userError'); err.hidden = true;

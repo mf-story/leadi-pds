@@ -27,6 +27,7 @@ const MAX_FILE = 200 * 1024 * 1024; // 200 MB per berkas (video pembelajaran)
 const WA_API_URL = process.env.WA_API_URL || '';                 // mis. http://127.0.0.1:3010/send
 const WA_API_KEY = process.env.WA_API_KEY || '';                 // opsional (Authorization: Bearer ...)
 const WA_ADMIN_NUMBER = process.env.WA_ADMIN_NUMBER || '6282345779247'; // boleh beberapa, dipisah koma
+const RESET_DEFAULT_PASSWORD = process.env.RESET_DEFAULT_PASSWORD || 'leadipds123'; // sandi default setelah reset admin
 function sendWhatsApp(number, message) {
   if (!WA_API_URL || !number) return;
   try {
@@ -50,6 +51,11 @@ function notifyMembersAddedWhatsApp(cycle, addedIds, actorName) {
     const u = DB.users.find(x => x.id === id);
     if (u && u.nohp) sendWhatsApp(u.nohp, `📌 *LeaDi-PDS* — Ditambahkan ke Siklus\n\nHalo ${u.nama}, Anda ditambahkan${actorName ? ` oleh ${actorName}` : ''} ke siklus *"${cycle.title}"*.\n\nBuka https://lessonstudy.online untuk melihat & berkolaborasi.`);
   });
+}
+// Reset kata sandi pengguna ke default + kabari via WA (bila ada nomor).
+function doResetPassword(u) {
+  u.password = hashPassword(RESET_DEFAULT_PASSWORD);
+  if (u.nohp) sendWhatsApp(u.nohp, `🔑 *LeaDi-PDS* — Kata Sandi Direset\n\nHalo ${u.nama}, kata sandi akun Anda telah *direset* oleh admin.\n🆔 Username: @${u.username}\n🔑 Kata sandi baru: *${RESET_DEFAULT_PASSWORD}*\n\n⚠️ Demi keamanan, segera *ganti kata sandi* setelah masuk (menu Akun ➜ Ganti kata sandi) di https://lessonstudy.online`);
 }
 
 // ------------------------------------------------------------------
@@ -120,6 +126,7 @@ function loadDB() {
   if (!Array.isArray(DB.institutions)) DB.institutions = [];
   if (!Array.isArray(DB.accountRequests)) DB.accountRequests = [];
   if (!Array.isArray(DB.messages)) DB.messages = [];
+  if (!Array.isArray(DB.resetRequests)) DB.resetRequests = [];
 }
 function saveDB() {
   const tmp = DB_FILE + '.tmp';
@@ -501,6 +508,26 @@ async function handleApi(req, res, url) {
     notify(adminIds, null, null, `Permintaan akun baru: ${nama} (@${username}) sebagai ${role === 'dosen' ? 'Dosen' : 'Guru'}. Tinjau di Kelola Pengguna.`, 'users');
     notifyAdminsWhatsApp(`🔔 *LeaDi-PDS* — Permintaan Akun Baru\n\n👤 Nama: ${nama}\n🆔 Username: @${username}\n🎓 Peran: ${role === 'dosen' ? 'Dosen' : 'Guru'}${email ? `\n✉️ Email: ${email}` : ''}${str(body.nohp, 30) ? `\n📱 WA: ${str(body.nohp, 30)}` : ''}${str(body.instansi, 160) ? `\n🏫 Instansi: ${str(body.instansi, 160)}` : ''}\n\nTinjau & setujui di menu *Kelola Pengguna*.`);
     saveDB();
+    return sendJSON(res, 200, { ok: true });
+  }
+
+  // --- PERMINTAAN RESET SANDI (publik; diproses admin) ---
+  if (seg[0] === 'reset-request' && method === 'POST') {
+    const body = await readBody(req);
+    const username = String(body.username || '').trim().toLowerCase();
+    if (!username) return sendJSON(res, 400, { error: 'Username wajib diisi' });
+    const u = DB.users.find(x => x.username.toLowerCase() === username);
+    if (u) {
+      if (!Array.isArray(DB.resetRequests)) DB.resetRequests = [];
+      if (!DB.resetRequests.some(r => r.userId === u.id)) {
+        DB.resetRequests.push({ id: uid('rst'), userId: u.id, username: u.username, nama: u.nama, nohp: u.nohp || '', createdAt: Date.now() });
+        const adminIds = DB.users.filter(x => x.role === 'admin').map(x => x.id);
+        notify(adminIds, null, null, `Permintaan reset sandi: ${u.nama} (@${u.username}). Proses di Kelola Pengguna.`, 'users');
+        notifyAdminsWhatsApp(`🔑 *LeaDi-PDS* — Permintaan Reset Sandi\n\n👤 Nama: ${u.nama}\n🆔 Username: @${u.username}${u.nohp ? `\n📱 WA: ${u.nohp}` : ''}\n\nReset di menu *Kelola Pengguna*.`);
+        saveDB();
+      }
+    }
+    // Selalu balas ok agar keberadaan username tidak bocor.
     return sendJSON(res, 200, { ok: true });
   }
 
@@ -1081,6 +1108,15 @@ async function handleApi(req, res, url) {
       saveDB();
       return sendJSON(res, 200, { user: publicUser(u) });
     }
+    // Reset sandi pengguna ke default (admin) + kabari via WA
+    if (seg[1] && seg[2] === 'reset-password' && method === 'POST') {
+      const u = DB.users.find(x => x.id === seg[1]);
+      if (!u) return sendJSON(res, 404, { error: 'Pengguna tidak ditemukan' });
+      doResetPassword(u);
+      DB.resetRequests = (DB.resetRequests || []).filter(r => r.userId !== u.id);
+      saveDB();
+      return sendJSON(res, 200, { ok: true, hasWa: !!u.nohp, defaultPassword: RESET_DEFAULT_PASSWORD, nama: u.nama });
+    }
     if (seg[1] && method === 'DELETE') {
       const u = DB.users.find(x => x.id === seg[1]);
       if (!u) return sendJSON(res, 404, { error: 'Pengguna tidak ditemukan' });
@@ -1122,6 +1158,30 @@ async function handleApi(req, res, url) {
       const before = DB.accountRequests.length;
       DB.accountRequests = DB.accountRequests.filter(r => r.id !== seg[1]);
       if (DB.accountRequests.length === before) return sendJSON(res, 404, { error: 'Permintaan tidak ditemukan' });
+      saveDB();
+      return sendJSON(res, 200, { ok: true });
+    }
+  }
+
+  // ================= RESET SANDI (admin) =================
+  if (seg[0] === 'reset-requests') {
+    if (!isAdmin(me)) return sendJSON(res, 403, { error: 'Hanya admin yang boleh memproses reset sandi' });
+    if (!seg[1] && method === 'GET') {
+      return sendJSON(res, 200, { requests: DB.resetRequests || [] });
+    }
+    if (seg[1] && seg[2] === 'approve' && method === 'POST') {
+      const idx = (DB.resetRequests || []).findIndex(r => r.id === seg[1]);
+      if (idx < 0) return sendJSON(res, 404, { error: 'Permintaan tidak ditemukan' });
+      const r = DB.resetRequests[idx];
+      const u = DB.users.find(x => x.id === r.userId);
+      if (!u) { DB.resetRequests.splice(idx, 1); saveDB(); return sendJSON(res, 404, { error: 'Pengguna tidak ditemukan' }); }
+      doResetPassword(u);
+      DB.resetRequests.splice(idx, 1);
+      saveDB();
+      return sendJSON(res, 200, { ok: true, hasWa: !!u.nohp, defaultPassword: RESET_DEFAULT_PASSWORD, nama: u.nama });
+    }
+    if (seg[1] && method === 'DELETE') {
+      DB.resetRequests = (DB.resetRequests || []).filter(r => r.id !== seg[1]);
       saveDB();
       return sendJSON(res, 200, { ok: true });
     }
