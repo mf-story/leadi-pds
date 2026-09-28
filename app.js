@@ -140,8 +140,8 @@
   const resetReqForm = $('#resetRequestForm');
   if (resetReqForm) resetReqForm.addEventListener('submit', async e => {
     e.preventDefault(); const err = $('#resetError'); err.hidden = true;
-    const username = $('#rsUsername').value.toLowerCase().replace(/[^a-z0-9._-]/g, '');
-    if (!username) { err.textContent = 'Isi username Anda'; err.hidden = false; return; }
+    const username = $('#rsUsername').value.trim();
+    if (!username) { err.textContent = 'Isi username atau nomor HP Anda'; err.hidden = false; return; }
     try {
       await api('POST', '/reset-request', { username });
       $('#resetRequestModal').hidden = true;

@@ -514,9 +514,12 @@ async function handleApi(req, res, url) {
   // --- PERMINTAAN RESET SANDI (publik; diproses admin) ---
   if (seg[0] === 'reset-request' && method === 'POST') {
     const body = await readBody(req);
-    const username = String(body.username || '').trim().toLowerCase();
-    if (!username) return sendJSON(res, 400, { error: 'Username wajib diisi' });
-    const u = DB.users.find(x => x.username.toLowerCase() === username);
+    const ident = String(body.username || body.ident || '').trim();
+    if (!ident) return sendJSON(res, 400, { error: 'Username atau nomor HP wajib diisi' });
+    const identLower = ident.toLowerCase();
+    const identDigits = ident.replace(/\D/g, '').replace(/^0/, '62');
+    const u = DB.users.find(x => x.username.toLowerCase() === identLower)
+      || (identDigits.length >= 8 && DB.users.find(x => String(x.nohp || '').replace(/\D/g, '').replace(/^0/, '62') === identDigits));
     if (u) {
       if (!Array.isArray(DB.resetRequests)) DB.resetRequests = [];
       if (!DB.resetRequests.some(r => r.userId === u.id)) {
